@@ -130,7 +130,7 @@ function renderPlan(){
   plan.textContent = `₹${p.price} (${p.name})`;
   expiry.textContent = p.expiry
     ? new Date(p.expiry).toLocaleDateString()
-    : "One-time (no expiry)";
+    : "One-time";
   aiLeft.textContent = p.aiLeft;
 
   rewriteBtn.disabled = p.aiLeft <= 0;
