@@ -89,6 +89,37 @@
 <script>
 document.getElementById("buildDate").textContent = new Date().toLocaleDateString();
 
+/* ---------------- Day 10.5 : ANALYTICS ---------------- */
+const analytics = JSON.parse(localStorage.getItem("analytics")) || {
+  visits: 0,
+  aiRewrites: 0,
+  pdfDownloads: 0,
+  saves: 0,
+  upgrades: 0,
+  lastAction: null
+};
+
+function track(action){
+  analytics[action] = (analytics[action] || 0) + 1;
+  analytics.lastAction = new Date().toISOString();
+  localStorage.setItem("analytics", JSON.stringify(analytics));
+  console.log("[Analytics]", action);
+}
+
+analytics.visits++;
+localStorage.setItem("analytics", JSON.stringify(analytics));
+
+/* ---------------- Day 10.5 : RATE LIMITER ---------------- */
+const limits = { ai: [], pdf: [] };
+
+function allow(action, max, perMs){
+  const now = Date.now();
+  limits[action] = limits[action].filter(t => now - t < perMs);
+  if(limits[action].length >= max) return false;
+  limits[action].push(now);
+  return true;
+}
+
 /* Razorpay TEST Key */
 const RAZORPAY_KEY = "rzp_test_SC2mAeZLsa3z1e";
 
@@ -116,13 +147,8 @@ if(!localStorage.getItem("plan")){
 }
 
 /* HELPERS */
-function getPlan(){
-  return JSON.parse(localStorage.getItem("plan"));
-}
-
-function savePlan(p){
-  localStorage.setItem("plan",JSON.stringify(p));
-}
+function getPlan(){ return JSON.parse(localStorage.getItem("plan")); }
+function savePlan(p){ localStorage.setItem("plan",JSON.stringify(p)); }
 
 function renderPlan(){
   const p = getPlan();
@@ -132,50 +158,66 @@ function renderPlan(){
     : "One-time";
   aiLeft.textContent = p.aiLeft;
   payStatus.textContent = p.paymentStatus;
-
   rewriteBtn.disabled = p.aiLeft <= 0;
   pdfBtn.disabled = p.aiLeft <= 0;
 }
 
 /* AI REWRITE */
 function rewriteSummary(){
+  if(!allow("ai",5,60000)){
+    alert("⚠️ Too many AI requests. Please slow down.");
+    return;
+  }
+
   const p = getPlan();
   if(p.aiLeft <= 0){
     alert("⚠️ AI limit reached. Please upgrade.");
     return;
   }
+
   summary.value = summary.value
     ? summary.value + " (AI optimized)"
     : "AI optimized professional summary.";
+
   p.aiLeft--;
   savePlan(p);
+  track("aiRewrites");
   renderPlan();
 }
 
 /* PDF */
 function downloadPDF(){
+  if(!allow("pdf",3,60000)){
+    alert("⚠️ Too many downloads. Please wait.");
+    return;
+  }
+
   const p = getPlan();
   if(p.aiLeft <= 0){
     alert("⚠️ Upgrade required.");
     return;
   }
+
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF();
   pdf.text(`Name: ${name.value}`,10,10);
   pdf.text(`Role: ${role.value}`,10,20);
   pdf.text(`Summary: ${summary.value}`,10,30);
   pdf.save("resume.pdf");
+
+  track("pdfDownloads");
 }
 
 /* SAVE */
 function saveResume(){
+  track("saves");
   alert("Resume saved locally (demo).");
 }
 
 /* MOCK VERIFICATION (Day 10.4) */
 function verifyPayment(paymentId){
   console.log("Verifying payment:", paymentId);
-  return true; // simulate backend verification
+  return true;
 }
 
 /* RAZORPAY */
@@ -191,23 +233,19 @@ function upgradePlan(){
     name: "ResumeIQ",
     description: `${planDef.name} Plan`,
     handler: function(resp){
+      track("upgrades");
 
-      // Step 1: mark payment pending
       const p = getPlan();
       p.paymentStatus = "pending";
       p.paymentId = resp.razorpay_payment_id;
       savePlan(p);
       renderPlan();
 
-      // Step 2: verify
       const verified = verifyPayment(resp.razorpay_payment_id);
-
       if(verified){
         p.price = price;
         p.name = planDef.name;
-        p.expiry = planDef.days
-          ? Date.now() + planDef.days * 86400000
-          : null;
+        p.expiry = Date.now() + planDef.days * 86400000;
         p.aiLeft = planDef.ai;
         p.paymentStatus = "verified";
         savePlan(p);
