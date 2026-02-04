@@ -157,7 +157,7 @@ function startCheckout() {
    * response: { url }
    */
 
-  fetch("/create-checkout-session", {
+  fetch("http://localhost:4242/create-checkout-session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ planId: plan.id })
