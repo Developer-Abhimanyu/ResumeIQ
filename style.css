@@ -1,0 +1,82 @@
+body {
+  font-family: Arial, sans-serif;
+  max-width: 720px;
+  margin: auto;
+  padding: 30px;
+}
+
+label {
+  font-weight: bold;
+  margin-top: 15px;
+  display: block;
+}
+
+input, textarea, button {
+  width: 100%;
+  padding: 8px;
+  margin-top: 6px;
+}
+
+button {
+  cursor: pointer;
+}
+
+#planBox {
+  background: #f0f0f0;
+  padding: 12px;
+  margin-bottom: 20px;
+}
+
+/* ---------- SAFE ADDITIONS (Day 7–8 support) ---------- */
+
+.box {
+  background: #ffffff;
+  padding: 16px;
+  margin-top: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+#insights p {
+  margin: 6px 0;
+  font-size: 14px;
+}
+
+#insights h4 {
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+.tag {
+  display: inline-block;
+  padding: 6px 10px;
+  margin: 4px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.tag.matched {
+  background: #d4f8d4;
+}
+
+.tag.missing {
+  background: #ffd6d6;
+}
+
+select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 8px;
+}
+
+/* Upgrade box spacing safety */
+.box select + button {
+  margin-top: 10px;
+}
+
+pre {
+  background: #f4f4f4;
+  padding: 15px;
+  margin-top: 20px;
+  white-space: pre-wrap;
+}
