@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
 
-  <!-- ✅ SEO -->
+  <!-- SEO -->
   <title>ResumeIQ – ATS Resume Builder & JD Matcher</title>
   <meta name="description" content="ResumeIQ helps you optimize your resume for ATS systems. Improve ATS score, match job descriptions, and download recruiter-ready PDFs." />
   <meta name="keywords" content="ATS Resume Builder, Resume ATS Checker, Job Description Match, Resume PDF" />
 
-  <!-- ✅ Social Sharing -->
+  <!-- Social -->
   <meta property="og:title" content="ResumeIQ – ATS Resume Builder" />
   <meta property="og:description" content="Improve your ATS score by 25–40%. Match job descriptions instantly and download ATS-friendly resumes." />
   <meta property="og:type" content="website" />
@@ -29,6 +29,10 @@
       font-size: 14px;
     }
     button { cursor: pointer; }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
     .box {
       background: #fff;
       padding: 16px;
@@ -36,15 +40,6 @@
       border-radius: 8px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     }
-    .tag {
-      display: inline-block;
-      padding: 6px 10px;
-      margin: 4px;
-      border-radius: 4px;
-      font-size: 13px;
-    }
-    .matched { background: #d4f8d4; }
-    .missing { background: #ffd6d6; }
     .muted { color: #666; font-size: 14px; }
   </style>
 
@@ -62,15 +57,16 @@
 <input id="name" placeholder="Name" />
 <input id="role" placeholder="Target Role" />
 <textarea id="summary" placeholder="Professional Summary"></textarea>
-<button onclick="rewriteSummary()">✨ Rewrite Summary (AI)</button>
+<button id="rewriteBtn" onclick="rewriteSummary()">✨ Rewrite Summary (AI)</button>
+
 <textarea id="jd" placeholder="Job Description"></textarea>
 <textarea id="experience" placeholder="Experience"></textarea>
 <input id="skills" placeholder="Skills (comma separated)" />
 
 <button onclick="saveResume()">Save Resume</button>
-<button onclick="downloadPDF()">Download Resume (PDF)</button>
+<button id="pdfBtn" onclick="downloadPDF()">Download Resume (PDF)</button>
 
-<!-- CURRENT PLAN -->
+<!-- PLAN -->
 <div class="box">
   <h3>Current Plan</h3>
   <p><b>Plan:</b> <span id="plan"></span></p>
@@ -100,7 +96,7 @@
 <script>
 document.getElementById("buildDate").textContent = new Date().toLocaleDateString();
 
-/* 🔑 Razorpay Test Key */
+/* 🔑 Razorpay TEST Key */
 const RAZORPAY_KEY = "rzp_test_SC2mAeZLsa3z1e";
 
 /* PLANS */
@@ -114,7 +110,7 @@ const PLANS = {
   1699:{name:"Yearly",days:365,ai:999}
 };
 
-/* Default plan */
+/* DEFAULT PLAN */
 if(!localStorage.getItem("plan")){
   localStorage.setItem("plan",JSON.stringify({
     price:49,
@@ -124,60 +120,100 @@ if(!localStorage.getItem("plan")){
   }));
 }
 
-/* Helpers */
-function getPlanByPrice(price){
-  return PLANS[price];
+/* HELPERS */
+function getPlan(){
+  return JSON.parse(localStorage.getItem("plan"));
 }
 
 function renderPlan(){
-  const p = JSON.parse(localStorage.getItem("plan"));
+  const p = getPlan();
   plan.textContent = `₹${p.price} (${p.name})`;
   expiry.textContent = p.expiry
     ? new Date(p.expiry).toLocaleDateString()
     : "One-time (no expiry)";
   aiLeft.textContent = p.aiLeft;
+
+  rewriteBtn.disabled = p.aiLeft <= 0;
+  pdfBtn.disabled = p.aiLeft <= 0;
 }
 
-/* Razorpay Checkout */
-function upgradePlan(){
-  const price = upgradeSelect.value;
-  const selectedPlan = getPlanByPrice(price);
+/* AI REWRITE – PAYWALL ENFORCED */
+function rewriteSummary(){
+  const p = getPlan();
 
-  if(!selectedPlan){
-    alert("Invalid plan");
+  if(p.aiLeft <= 0){
+    alert("⚠️ AI limit reached. Please upgrade your plan.");
     return;
   }
+
+  summary.value = summary.value
+    ? summary.value + " (AI optimized)"
+    : "AI optimized professional summary.";
+
+  p.aiLeft -= 1;
+  localStorage.setItem("plan",JSON.stringify(p));
+  renderPlan();
+}
+
+/* PDF */
+function downloadPDF(){
+  const p = getPlan();
+  if(p.aiLeft <= 0){
+    alert("⚠️ Upgrade required to download PDF.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+  pdf.text(`Name: ${name.value}`,10,10);
+  pdf.text(`Role: ${role.value}`,10,20);
+  pdf.text(`Summary: ${summary.value}`,10,30);
+  pdf.save("resume.pdf");
+}
+
+/* SAVE */
+function saveResume(){
+  alert("Resume saved locally (demo).");
+}
+
+/* RAZORPAY */
+function upgradePlan(){
+  const price = upgradeSelect.value;
+  const planDef = PLANS[price];
+  if(!planDef) return alert("Invalid plan");
 
   const options = {
     key: RAZORPAY_KEY,
     amount: price * 100,
     currency: "INR",
     name: "ResumeIQ",
-    description: `${selectedPlan.name} Plan`,
-
+    description: `${planDef.name} Plan`,
+    prefill:{
+      name: name.value || "ResumeIQ User",
+      email: "test@resumeiq.online"
+    },
     handler: function(){
-      const expiry = selectedPlan.days
-        ? Date.now() + selectedPlan.days * 86400000
+      const expiry = planDef.days
+        ? Date.now() + planDef.days * 86400000
         : null;
 
       localStorage.setItem("plan",JSON.stringify({
         price,
-        name: selectedPlan.name,
+        name: planDef.name,
         expiry,
-        aiLeft: selectedPlan.ai
+        aiLeft: planDef.ai
       }));
 
       alert("🎉 Payment successful! Plan activated.");
       renderPlan();
     },
-
     theme:{ color:"#0f172a" }
   };
 
   new Razorpay(options).open();
 }
 
-/* Init */
+/* INIT */
 renderPlan();
 </script>
 
