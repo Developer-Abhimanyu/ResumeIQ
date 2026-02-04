@@ -33,6 +33,39 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     }
     .muted { color: #666; font-size: 14px; }
+
+    /* ---------- Day 10.6 : ADMIN PANEL ---------- */
+    #adminPanel {
+      display: none;
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      width: 320px;
+      background: #0f172a;
+      color: #fff;
+      padding: 16px;
+      border-radius: 12px;
+      z-index: 9999;
+      font-size: 13px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+    #adminPanel h4 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+    }
+    #adminPanel button {
+      width: 100%;
+      margin-top: 6px;
+      padding: 8px;
+      background: #334155;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #adminPanel button:hover {
+      background: #475569;
+    }
   </style>
 
   <!-- PDF -->
@@ -84,6 +117,15 @@
 
 <div class="box muted">
   ResumeIQ v1.0 • Last updated: <span id="buildDate"></span>
+</div>
+
+<!-- ---------- Day 10.6 : ADMIN PANEL ---------- -->
+<div id="adminPanel">
+  <h4>🔐 Admin Panel</h4>
+  <div id="adminStats"></div>
+  <button onclick="resetAnalytics()">Reset Analytics</button>
+  <button onclick="resetPlan()">Reset Plan</button>
+  <button onclick="exportAnalytics()">Export Analytics</button>
 </div>
 
 <script>
@@ -214,7 +256,7 @@ function saveResume(){
   alert("Resume saved locally (demo).");
 }
 
-/* MOCK VERIFICATION (Day 10.4) */
+/* MOCK VERIFICATION */
 function verifyPayment(paymentId){
   console.log("Verifying payment:", paymentId);
   return true;
@@ -258,6 +300,42 @@ function upgradePlan(){
   };
 
   new Razorpay(options).open();
+}
+
+/* ---------- Day 10.6 : ADMIN PANEL LOGIC ---------- */
+document.addEventListener("keydown", function(e){
+  if((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "D"){
+    const panel = document.getElementById("adminPanel");
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+    renderAdmin();
+  }
+});
+
+function renderAdmin(){
+  document.getElementById("adminStats").innerHTML = `
+    Visits: ${analytics.visits}<br>
+    AI Rewrites: ${analytics.aiRewrites}<br>
+    PDF Downloads: ${analytics.pdfDownloads}<br>
+    Saves: ${analytics.saves}<br>
+    Upgrades: ${analytics.upgrades}<br>
+    Last Action: ${analytics.lastAction || "-"}
+  `;
+}
+
+function resetAnalytics(){
+  localStorage.removeItem("analytics");
+  alert("Analytics reset");
+  location.reload();
+}
+
+function resetPlan(){
+  localStorage.removeItem("plan");
+  alert("Plan reset");
+  location.reload();
+}
+
+function exportAnalytics(){
+  alert(JSON.stringify(analytics, null, 2));
 }
 
 /* INIT */
