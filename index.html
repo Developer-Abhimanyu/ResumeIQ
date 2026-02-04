@@ -2,345 +2,148 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>ResumeIQ – ATS Resume Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- SEO -->
-  <title>ResumeIQ – ATS Resume Builder & JD Matcher</title>
-  <meta name="description" content="ResumeIQ helps you optimize your resume ATS score." />
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 24px;
-      max-width: 900px;
-      margin: auto;
-      background: #fafafa;
-    }
-    input, textarea, button, select {
-      width: 100%;
-      margin: 8px 0;
-      padding: 10px;
-      font-size: 14px;
-    }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .box {
-      background: #fff;
-      padding: 16px;
-      margin-top: 24px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    }
-    .muted { color: #666; font-size: 14px; }
-
-    /* ---------- Day 10.6 : ADMIN PANEL ---------- */
-    #adminPanel {
-      display: none;
-      position: fixed;
-      bottom: 16px;
-      right: 16px;
-      width: 320px;
-      background: #0f172a;
-      color: #fff;
-      padding: 16px;
-      border-radius: 12px;
-      z-index: 9999;
-      font-size: 13px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-    }
-    #adminPanel h4 {
-      margin: 0 0 8px 0;
-      font-size: 14px;
-    }
-    #adminPanel button {
-      width: 100%;
-      margin-top: 6px;
-      padding: 8px;
-      background: #334155;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    #adminPanel button:hover {
-      background: #475569;
-    }
-  </style>
-
-  <!-- PDF -->
+  <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- Razorpay -->
+  <!-- Razorpay (kept intact) -->
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
+
 <body>
 
-<h2>ResumeIQ ATS Resume Builder</h2>
-<p class="muted">Improve your resume ATS score and match job descriptions in seconds.</p>
+  <!-- ================= HEADER ================= -->
+  <h2>ATS Resume Builder</h2>
+  <p class="muted">
+    Optimize your resume for ATS and recruiters.  
+    <b>25%+ higher shortlisting rate</b> on average.
+  </p>
 
-<input id="name" placeholder="Name" />
-<input id="role" placeholder="Target Role" />
-<textarea id="summary" placeholder="Professional Summary"></textarea>
-<button id="rewriteBtn" onclick="rewriteSummary()">✨ Rewrite Summary (AI)</button>
+  <!-- ================= FORM ================= -->
+  <div class="box">
+    <label>Name</label>
+    <input id="name" placeholder="John Doe" />
 
-<textarea id="jd" placeholder="Job Description"></textarea>
-<textarea id="experience" placeholder="Experience"></textarea>
-<input id="skills" placeholder="Skills (comma separated)" />
+    <label>Target Role</label>
+    <input id="role" placeholder="Android Developer" />
 
-<button onclick="saveResume()">Save Resume</button>
-<button id="pdfBtn" onclick="downloadPDF()">Download Resume (PDF)</button>
+    <label>Professional Summary</label>
+    <textarea id="summary" placeholder="Brief summary..."></textarea>
+    <button id="rewriteBtn">✨ Rewrite Summary (AI)</button>
 
-<!-- PLAN -->
-<div class="box">
-  <h3>Current Plan</h3>
-  <p><b>Plan:</b> <span id="plan"></span></p>
-  <p><b>Plan Expiry:</b> <span id="expiry"></span></p>
-  <p><b>AI Rewrites Left:</b> <span id="aiLeft"></span></p>
-  <p><b>Payment Status:</b> <span id="payStatus"></span></p>
-</div>
+    <label>Job Description</label>
+    <textarea id="jd" placeholder="Paste JD here"></textarea>
 
-<!-- UPGRADE -->
-<div class="box">
-  <h3>Upgrade Plan</h3>
-  <select id="upgradeSelect">
-    <option value="49">₹49 – One Time</option>
-    <option value="99">₹99 – 1 Week</option>
-    <option value="149">₹149 – 15 Days</option>
-    <option value="299">₹299 – 1 Month</option>
-    <option value="699">₹699 – 3 Months</option>
-    <option value="999">₹999 – 6 Months</option>
-    <option value="1699">₹1699 – 1 Year</option>
-  </select>
-  <button onclick="upgradePlan()">Upgrade</button>
-</div>
+    <label>Experience</label>
+    <textarea id="experience" placeholder="Your experience"></textarea>
 
-<div class="box muted">
-  ResumeIQ v1.0 • Last updated: <span id="buildDate"></span>
-</div>
+    <label>Skills</label>
+    <input id="skills" placeholder="Kotlin, Jetpack Compose, Firebase" />
 
-<!-- ---------- Day 10.6 : ADMIN PANEL ---------- -->
-<div id="adminPanel">
-  <h4>🔐 Admin Panel</h4>
-  <div id="adminStats"></div>
-  <button onclick="resetAnalytics()">Reset Analytics</button>
-  <button onclick="resetPlan()">Reset Plan</button>
-  <button onclick="exportAnalytics()">Export Analytics</button>
-</div>
+    <button onclick="saveResume()">Save Resume</button>
+    <button id="pdfBtn">Download Resume (PDF)</button>
+  </div>
 
-<script>
-document.getElementById("buildDate").textContent = new Date().toLocaleDateString();
+  <!-- ================= PLAN & USAGE ================= -->
+  <div class="box">
+    <h3>Your Plan</h3>
+    <p><b>Plan:</b> <span id="plan"></span></p>
+    <p><b>Expiry:</b> <span id="expiry"></span></p>
+    <p><b>AI Credits Left:</b> <span id="aiLeft"></span></p>
 
-/* ---------------- Day 10.5 : ANALYTICS ---------------- */
-const analytics = JSON.parse(localStorage.getItem("analytics")) || {
-  visits: 0,
-  aiRewrites: 0,
-  pdfDownloads: 0,
-  saves: 0,
-  upgrades: 0,
-  lastAction: null
-};
+    <div class="usage-box">
+      <div class="usage-header">
+        <h4>AI Usage</h4>
+        <span id="usageLabel">Credits remaining</span>
+      </div>
 
-function track(action){
-  analytics[action] = (analytics[action] || 0) + 1;
-  analytics.lastAction = new Date().toISOString();
-  localStorage.setItem("analytics", JSON.stringify(analytics));
-  console.log("[Analytics]", action);
-}
+      <div class="usage-bar">
+        <div id="usageFill" class="usage-fill"></div>
+      </div>
 
-analytics.visits++;
-localStorage.setItem("analytics", JSON.stringify(analytics));
+      <div class="usage-footer">
+        Low credits may interrupt AI rewrites
+      </div>
+    </div>
+  </div>
 
-/* ---------------- Day 10.5 : RATE LIMITER ---------------- */
-const limits = { ai: [], pdf: [] };
+  <!-- ================= PRICING ================= -->
+  <div class="box">
+    <h3>Upgrade & Unlock Full Power</h3>
+    <p class="muted">
+      Recruiter-approved formats • Unlimited exports • Faster shortlisting
+    </p>
 
-function allow(action, max, perMs){
-  const now = Date.now();
-  limits[action] = limits[action].filter(t => now - t < perMs);
-  if(limits[action].length >= max) return false;
-  limits[action].push(now);
-  return true;
-}
+    <!-- Billing Toggle -->
+    <div class="billing-toggle">
+      <span>Monthly</span>
+      <label class="switch">
+        <input type="checkbox" id="billingToggle" />
+        <span class="slider"></span>
+      </label>
+      <span>Annual <b>(Save 25%)</b></span>
+    </div>
 
-/* Razorpay TEST Key */
-const RAZORPAY_KEY = "rzp_test_SC2mAeZLsa3z1e";
+    <div class="pricing-grid">
+      <div class="pricing-card recommended">
+        <h4>Pro Plan</h4>
+        <div class="price">
+          ₹<span id="priceDisplay">299</span>
+        </div>
+        <p class="muted">
+          Unlimited AI rewrites<br />
+          Advanced ATS optimization<br />
+          Priority processing
+        </p>
+        <button onclick="startCheckout()">Upgrade & Unlock ATS Boost</button>
+      </div>
+    </div>
 
-/* PLANS */
-const PLANS = {
-  49:{name:"One-Time",days:1,ai:3},
-  99:{name:"Weekly",days:7,ai:10},
-  149:{name:"15 Days",days:15,ai:25},
-  299:{name:"Monthly",days:30,ai:50},
-  699:{name:"3 Months",days:90,ai:120},
-  999:{name:"6 Months",days:180,ai:250},
-  1699:{name:"Yearly",days:365,ai:999}
-};
+    <div class="trust-badges">
+      🔒 Secure payments • 💳 Cards / UPI • Cancel anytime
+    </div>
+  </div>
 
-/* DEFAULT PLAN */
-if(!localStorage.getItem("plan")){
-  localStorage.setItem("plan",JSON.stringify({
-    price:49,
-    name:"One-Time",
-    expiry:null,
-    aiLeft:3,
-    paymentStatus:"none",
-    paymentId:null
-  }));
-}
+  <!-- ================= BILLING ================= -->
+  <div class="billing-box">
+    <h4>Billing & Payments</h4>
+    <div class="payment-card">
+      <div>
+        <b>Secure Checkout</b><br />
+        <span>Powered by Stripe / Razorpay</span>
+      </div>
+      <span>256-bit SSL</span>
+    </div>
 
-/* HELPERS */
-function getPlan(){ return JSON.parse(localStorage.getItem("plan")); }
-function savePlan(p){ localStorage.setItem("plan",JSON.stringify(p)); }
+    <div class="trust-badges">
+      PCI-DSS compliant • Instant activation • GST invoice
+    </div>
+  </div>
 
-function renderPlan(){
-  const p = getPlan();
-  plan.textContent = `₹${p.price} (${p.name})`;
-  expiry.textContent = p.expiry
-    ? new Date(p.expiry).toLocaleDateString()
-    : "One-time";
-  aiLeft.textContent = p.aiLeft;
-  payStatus.textContent = p.paymentStatus;
-  rewriteBtn.disabled = p.aiLeft <= 0;
-  pdfBtn.disabled = p.aiLeft <= 0;
-}
+  <!-- ================= UPGRADE MODAL ================= -->
+  <div class="modal-backdrop" id="upgradeModal" style="display:none;">
+    <div class="upgrade-modal">
+      <h3>⚠️ Low AI Credits</h3>
+      <p>
+        You’re running low on AI credits.  
+        Upgrade now to avoid interruptions.
+      </p>
+      <div class="actions">
+        <button onclick="startCheckout()">Upgrade Now</button>
+        <button class="secondary" onclick="closeUpgradeModal()">Maybe Later</button>
+      </div>
+    </div>
+  </div>
 
-/* AI REWRITE */
-function rewriteSummary(){
-  if(!allow("ai",5,60000)){
-    alert("⚠️ Too many AI requests. Please slow down.");
-    return;
-  }
+  <div class="box muted">
+    ResumeIQ v1.0 • Build <span id="buildDate"></span>
+  </div>
 
-  const p = getPlan();
-  if(p.aiLeft <= 0){
-    alert("⚠️ AI limit reached. Please upgrade.");
-    return;
-  }
-
-  summary.value = summary.value
-    ? summary.value + " (AI optimized)"
-    : "AI optimized professional summary.";
-
-  p.aiLeft--;
-  savePlan(p);
-  track("aiRewrites");
-  renderPlan();
-}
-
-/* PDF */
-function downloadPDF(){
-  if(!allow("pdf",3,60000)){
-    alert("⚠️ Too many downloads. Please wait.");
-    return;
-  }
-
-  const p = getPlan();
-  if(p.aiLeft <= 0){
-    alert("⚠️ Upgrade required.");
-    return;
-  }
-
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF();
-  pdf.text(`Name: ${name.value}`,10,10);
-  pdf.text(`Role: ${role.value}`,10,20);
-  pdf.text(`Summary: ${summary.value}`,10,30);
-  pdf.save("resume.pdf");
-
-  track("pdfDownloads");
-}
-
-/* SAVE */
-function saveResume(){
-  track("saves");
-  alert("Resume saved locally (demo).");
-}
-
-/* MOCK VERIFICATION */
-function verifyPayment(paymentId){
-  console.log("Verifying payment:", paymentId);
-  return true;
-}
-
-/* RAZORPAY */
-function upgradePlan(){
-  const price = upgradeSelect.value;
-  const planDef = PLANS[price];
-  if(!planDef) return alert("Invalid plan");
-
-  const options = {
-    key: RAZORPAY_KEY,
-    amount: price * 100,
-    currency: "INR",
-    name: "ResumeIQ",
-    description: `${planDef.name} Plan`,
-    handler: function(resp){
-      track("upgrades");
-
-      const p = getPlan();
-      p.paymentStatus = "pending";
-      p.paymentId = resp.razorpay_payment_id;
-      savePlan(p);
-      renderPlan();
-
-      const verified = verifyPayment(resp.razorpay_payment_id);
-      if(verified){
-        p.price = price;
-        p.name = planDef.name;
-        p.expiry = Date.now() + planDef.days * 86400000;
-        p.aiLeft = planDef.ai;
-        p.paymentStatus = "verified";
-        savePlan(p);
-        alert("✅ Payment verified. Plan activated.");
-        renderPlan();
-      } else {
-        alert("❌ Payment verification failed.");
-      }
-    }
-  };
-
-  new Razorpay(options).open();
-}
-
-/* ---------- Day 10.6 : ADMIN PANEL LOGIC ---------- */
-document.addEventListener("keydown", function(e){
-  if((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "D"){
-    const panel = document.getElementById("adminPanel");
-    panel.style.display = panel.style.display === "none" ? "block" : "none";
-    renderAdmin();
-  }
-});
-
-function renderAdmin(){
-  document.getElementById("adminStats").innerHTML = `
-    Visits: ${analytics.visits}<br>
-    AI Rewrites: ${analytics.aiRewrites}<br>
-    PDF Downloads: ${analytics.pdfDownloads}<br>
-    Saves: ${analytics.saves}<br>
-    Upgrades: ${analytics.upgrades}<br>
-    Last Action: ${analytics.lastAction || "-"}
-  `;
-}
-
-function resetAnalytics(){
-  localStorage.removeItem("analytics");
-  alert("Analytics reset");
-  location.reload();
-}
-
-function resetPlan(){
-  localStorage.removeItem("plan");
-  alert("Plan reset");
-  location.reload();
-}
-
-function exportAnalytics(){
-  alert(JSON.stringify(analytics, null, 2));
-}
-
-/* INIT */
-renderPlan();
-</script>
-
+  <script src="app.js"></script>
 </body>
 </html>

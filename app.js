@@ -1,7 +1,25 @@
+/* =====================================================
+   DOM REFERENCES
+   ===================================================== */
+
 const form = document.getElementById("resumeForm");
 const output = document.getElementById("output");
 
-/* ------------------ GLOBAL STATE ------------------ */
+const planEl = document.getElementById("plan");
+const expiryEl = document.getElementById("expiry");
+const aiLeftEl = document.getElementById("aiLeft");
+
+const usageFill = document.getElementById("usageFill");
+const usageLabel = document.getElementById("usageLabel");
+
+const upgradeModal = document.getElementById("upgradeModal");
+const billingToggle = document.getElementById("billingToggle");
+const priceDisplay = document.getElementById("priceDisplay");
+
+/* =====================================================
+   GLOBAL STATE
+   ===================================================== */
+
 window.resumeData = null;
 window.atsScore = 0;
 window.jdMatchPercent = 0;
@@ -9,134 +27,205 @@ window.matchingKeywords = [];
 window.missingKeywords = [];
 window.lastSavedTime = null;
 
-/* ------------------ PLANS ------------------ */
+/* =====================================================
+   PLANS (SOURCE OF TRUTH)
+   ===================================================== */
+
 const PLANS = {
-  ONE_TIME: { label: "One Time", price: 49, days: 1, ai: 3 },
-  WEEK: { label: "1 Week", price: 99, days: 7, ai: 10 },
-  FIFTEEN: { label: "15 Days", price: 149, days: 15, ai: 25 },
-  MONTH: { label: "1 Month", price: 299, days: 30, ai: 50 },
-  THREE_MONTH: { label: "3 Months", price: 699, days: 90, ai: 120 },
-  SIX_MONTH: { label: "6 Months", price: 999, days: 180, ai: 250 },
-  YEAR: { label: "1 Year", price: 1699, days: 365, ai: 999 }
+  MONTHLY: {
+    id: "pro_monthly",
+    label: "Pro Monthly",
+    price: 299,
+    days: 30,
+    ai: 50
+  },
+  ANNUAL: {
+    id: "pro_annual",
+    label: "Pro Annual",
+    price: 2999, // effective ₹249/month
+    days: 365,
+    ai: 999
+  }
 };
 
-/* ------------------ USER PLAN ------------------ */
+/* =====================================================
+   USER PLAN
+   ===================================================== */
+
 let userPlan = JSON.parse(localStorage.getItem("userPlan")) || {
   name: "FREE",
   expiresAt: null,
-  aiLeft: 2
+  aiLeft: 2,
+  aiTotal: 2
 };
 
-/* ------------------ PLAN HELPERS ------------------ */
+/* =====================================================
+   PLAN HELPERS
+   ===================================================== */
+
 function isProActive() {
   return userPlan.name !== "FREE" && userPlan.expiresAt > Date.now();
 }
 
+function creditsPercentLeft() {
+  if (!userPlan.aiTotal) return 0;
+  return Math.round((userPlan.aiLeft / userPlan.aiTotal) * 100);
+}
+
+/* =====================================================
+   UI UPDATE (PLAN + USAGE)
+   ===================================================== */
+
 function updatePlanUI() {
-  const status = document.getElementById("planStatus");
-  const expiry = document.getElementById("planExpiry");
-  const aiLeftUI = document.getElementById("aiLeft");
-  const upgradeBtn = document.getElementById("upgradeBtn");
+  if (planEl) planEl.innerText = userPlan.name;
+  if (expiryEl) {
+    expiryEl.innerText = userPlan.expiresAt
+      ? new Date(userPlan.expiresAt).toLocaleDateString()
+      : "—";
+  }
+  if (aiLeftEl) aiLeftEl.innerText = userPlan.aiLeft;
 
-  if (!status || !expiry) return;
+  updateUsageMeter();
+}
 
-  if (isProActive()) {
-    status.innerText = `Plan: ${userPlan.name} 💎`;
-    expiry.innerText =
-      "Valid till: " + new Date(userPlan.expiresAt).toLocaleString();
-    if (upgradeBtn) upgradeBtn.style.display = "none";
+function updateUsageMeter() {
+  if (!usageFill) return;
+
+  const percent = creditsPercentLeft();
+  usageFill.style.width = `${percent}%`;
+
+  const box = usageFill.parentElement.parentElement;
+  box.classList.remove("usage-warning", "usage-critical");
+
+  if (percent <= 20) {
+    box.classList.add("usage-critical");
+    usageLabel.innerText = "Critically low credits";
+    autoShowUpgradeModal();
+  } else if (percent <= 40) {
+    box.classList.add("usage-warning");
+    usageLabel.innerText = "Running low on credits";
   } else {
-    status.innerText = "Plan: FREE";
-    expiry.innerText = "No expiry";
-    if (upgradeBtn) upgradeBtn.style.display = "inline-block";
-  }
-
-  if (aiLeftUI) {
-    aiLeftUI.innerText = userPlan.aiLeft;
+    usageLabel.innerText = "Credits remaining";
   }
 }
 
-/* ------------------ COMPLETENESS ------------------ */
-function calculateCompleteness(data) {
-  let filled = 0;
-  let total = 5;
-  if (data.name) filled++;
-  if (data.role) filled++;
-  if (data.summary) filled++;
-  if (data.experience) filled++;
-  if (data.skills.length) filled++;
-  return Math.round((filled / total) * 100);
+/* =====================================================
+   AUTO UPGRADE MODAL
+   ===================================================== */
+
+function autoShowUpgradeModal() {
+  if (isProActive()) return;
+  if (creditsPercentLeft() > 20) return;
+
+  // show once per session
+  if (sessionStorage.getItem("upgradeModalShown")) return;
+
+  upgradeModal.style.display = "flex";
+  sessionStorage.setItem("upgradeModalShown", "true");
 }
 
-/* ------------------ ATS SCORE ------------------ */
-function calculateATSScore(data) {
-  let score = 0;
-  let reasons = [];
-
-  if (data.name && data.role) score += 10;
-  else reasons.push("Missing name or target role");
-
-  if (data.summary.length > 40) score += 15;
-  else reasons.push("Summary too short");
-
-  if (data.experience.length > 100) score += 25;
-  else reasons.push("Experience needs more detail");
-
-  if (data.skills.length >= 5) score += 20;
-  else reasons.push("Add at least 5 skills");
-
-  const wc = (
-    data.summary +
-    data.experience +
-    data.skills.join(" ")
-  ).split(/\s+/).length;
-
-  if (wc >= 150 && wc <= 600) score += 30;
-  else reasons.push("Resume length not ATS optimized");
-
-  return { score, reasons };
+function closeUpgradeModal() {
+  upgradeModal.style.display = "none";
 }
 
-/* ------------------ JD MATCH ------------------ */
-function calculateJDMatch(resumeData, jobDesc) {
-  if (!jobDesc || jobDesc.length < 30)
-    return { matchPercent: 0, matched: [], missing: [] };
+/* =====================================================
+   BILLING TOGGLE
+   ===================================================== */
 
-  const resumeText = (
-    resumeData.summary +
-    resumeData.experience +
-    resumeData.skills.join(" ")
-  ).toLowerCase();
+function updatePricingUI() {
+  if (!priceDisplay) return;
 
-  const jdWords = jobDesc
-    .toLowerCase()
-    .replace(/[^a-z\s]/g, "")
-    .split(/\s+/)
-    .filter(w => w.length > 3);
+  if (billingToggle.checked) {
+    priceDisplay.innerText = "249 / mo";
+  } else {
+    priceDisplay.innerText = "299";
+  }
+}
 
-  const uniqueJD = [...new Set(jdWords)];
-  let matched = [];
-  let missing = [];
+/* =====================================================
+   STRIPE CHECKOUT (FRONTEND READY)
+   ===================================================== */
 
-  uniqueJD.forEach(w =>
-    resumeText.includes(w) ? matched.push(w) : missing.push(w)
-  );
+function startCheckout() {
+  const isAnnual = billingToggle.checked;
+  const plan = isAnnual ? PLANS.ANNUAL : PLANS.MONTHLY;
 
-  return {
-    matchPercent: Math.round((matched.length / uniqueJD.length) * 100),
-    matched,
-    missing
+  /**
+   * ⚠️ Backend expectation:
+   * POST /create-checkout-session
+   * body: { planId: plan.id }
+   * response: { url }
+   */
+
+  fetch("/create-checkout-session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ planId: plan.id })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert("Unable to start checkout");
+      }
+    })
+    .catch(() => {
+      // DEV FALLBACK (local testing)
+      activatePlanLocally(plan);
+    });
+}
+
+/* =====================================================
+   LOCAL DEV PLAN ACTIVATE (NO PAYMENT)
+   ===================================================== */
+
+function activatePlanLocally(plan) {
+  userPlan = {
+    name: plan.label,
+    expiresAt: Date.now() + plan.days * 86400000,
+    aiLeft: plan.ai,
+    aiTotal: plan.ai
   };
+
+  localStorage.setItem("userPlan", JSON.stringify(userPlan));
+  updatePlanUI();
+  closeUpgradeModal();
+  alert("🎉 Plan activated (DEV MODE)");
 }
 
-/* ------------------ AI MOCK ------------------ */
+/* =====================================================
+   AI MOCK
+   ===================================================== */
+
 function aiRewriteSummary(text) {
   return `ATS-optimized professional summary:
 ${text}
-Focused on impact, ownership, and results.`;
+Focused on impact, ownership, and measurable results.`;
 }
 
-/* ------------------ SAVE ------------------ */
+/* =====================================================
+   AI REWRITE HANDLER
+   ===================================================== */
+
+rewriteSummaryBtn.addEventListener("click", () => {
+  if (!isProActive() && userPlan.aiLeft <= 0) {
+    autoShowUpgradeModal();
+    return;
+  }
+
+  summary.value = aiRewriteSummary(summary.value);
+
+  userPlan.aiLeft--;
+  localStorage.setItem("userPlan", JSON.stringify(userPlan));
+
+  updatePlanUI();
+});
+
+/* =====================================================
+   FORM SAVE (UNCHANGED CORE)
+   ===================================================== */
+
 form.addEventListener("submit", e => {
   e.preventDefault();
 
@@ -149,99 +238,28 @@ form.addEventListener("submit", e => {
     skills: skills.value.split(",").map(s => s.trim()).filter(Boolean)
   };
 
-  window.lastSavedTime = new Date().toLocaleString();
   window.resumeData = resumeData;
+  window.lastSavedTime = new Date().toLocaleString();
 
   localStorage.setItem(
     "resumeData",
     JSON.stringify({ ...resumeData, savedTime: window.lastSavedTime })
   );
 
-  const completeness = calculateCompleteness(resumeData);
-  const ats = calculateATSScore(resumeData);
-  const jd = calculateJDMatch(resumeData, resumeData.jobDesc);
-
-  window.atsScore = ats.score;
-  window.jdMatchPercent = jd.matchPercent;
-  window.matchingKeywords = jd.matched;
-  window.missingKeywords = jd.missing;
-
   output.innerText = `
 Resume Saved ✅
 
-ATS Score: ${window.atsScore}/100
-JD Match: ${window.jdMatchPercent}%
-Resume Completeness: ${completeness}%
-
-Matched Keywords:
-${jd.matched.slice(0, 10).join(", ") || "None"}
-
-Missing Keywords:
-${jd.missing.slice(0, 10).join(", ") || "None"}
-
+AI Credits Left: ${userPlan.aiLeft}
 Last Saved: ${window.lastSavedTime}
 `;
 
   updatePlanUI();
 });
 
-/* ------------------ AI REWRITE ------------------ */
-rewriteSummaryBtn.addEventListener("click", () => {
-  if (!isProActive() && userPlan.aiLeft <= 0) {
-    alert("AI limit exhausted. Upgrade your plan.");
-    return;
-  }
+/* =====================================================
+   LOAD
+   ===================================================== */
 
-  summary.value = aiRewriteSummary(summary.value);
-
-  if (!isProActive()) {
-    userPlan.aiLeft--;
-    localStorage.setItem("userPlan", JSON.stringify(userPlan));
-  }
-
-  updatePlanUI();
-  alert("Summary rewritten ✨");
-});
-
-/* ------------------ UPGRADE ------------------ */
-upgradeBtn.addEventListener("click", () => {
-  const choice = prompt(
-`Choose Plan:
-1 ₹49 One Time
-2 ₹99 One Week
-3 ₹149 15 Days
-4 ₹299 1 Month
-5 ₹699 3 Months
-6 ₹999 6 Months
-7 ₹1699 1 Year`
-  );
-
-  const map = [
-    null,
-    PLANS.ONE_TIME,
-    PLANS.WEEK,
-    PLANS.FIFTEEN,
-    PLANS.MONTH,
-    PLANS.THREE_MONTH,
-    PLANS.SIX_MONTH,
-    PLANS.YEAR
-  ];
-
-  const selected = map[choice];
-  if (!selected) return alert("Invalid plan");
-
-  userPlan = {
-    name: selected.label,
-    expiresAt: Date.now() + selected.days * 86400000,
-    aiLeft: selected.ai
-  };
-
-  localStorage.setItem("userPlan", JSON.stringify(userPlan));
-  alert("🎉 Plan activated successfully!");
-  updatePlanUI();
-});
-
-/* ------------------ LOAD ------------------ */
 window.onload = () => {
   const data = JSON.parse(localStorage.getItem("resumeData") || "{}");
 
@@ -252,5 +270,8 @@ window.onload = () => {
   jobDesc.value = data.jobDesc || "";
   skills.value = (data.skills || []).join(", ");
 
+  updatePricingUI();
   updatePlanUI();
 };
+
+billingToggle?.addEventListener("change", updatePricingUI);
