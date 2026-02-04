@@ -48,7 +48,11 @@
     .muted { color: #666; font-size: 14px; }
   </style>
 
+  <!-- PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Razorpay -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
 
@@ -66,54 +70,12 @@
 <button onclick="saveResume()">Save Resume</button>
 <button onclick="downloadPDF()">Download Resume (PDF)</button>
 
-<!-- ✅ TRUST SECTION -->
-<div class="box">
-  <h3>Why ResumeIQ?</h3>
-  <ul>
-    <li>🔒 Your data never leaves your browser</li>
-    <li>⚡ Instant ATS score & keyword analysis</li>
-    <li>📄 Recruiter-ready PDF resumes</li>
-    <li>🇮🇳 Built for Indian & global job markets</li>
-  </ul>
-</div>
-
-<!-- ✅ HOW IT WORKS -->
-<div class="box">
-  <h3>How it works</h3>
-  <ol>
-    <li>Paste your resume details</li>
-    <li>Add the job description</li>
-    <li>Get ATS score, missing keywords & PDF</li>
-  </ol>
-</div>
-
-<!-- ✅ CTA -->
-<div class="box">
-  <h3>Most users improve ATS score by 25–40% on first try</h3>
-  <p class="muted">Optimize once. Apply everywhere.</p>
-</div>
-
-<!-- ✅ CURRENT PLAN -->
+<!-- CURRENT PLAN -->
 <div class="box">
   <h3>Current Plan</h3>
   <p><b>Plan:</b> <span id="plan"></span></p>
   <p><b>Plan Expiry:</b> <span id="expiry"></span></p>
   <p><b>AI Rewrites Left:</b> <span id="aiLeft"></span></p>
-</div>
-
-<!-- INSIGHTS -->
-<div id="insights" class="box" style="display:none">
-  <h3>Resume Insights</h3>
-  <p><b>ATS Score:</b> <span id="atsScore"></span></p>
-  <p><b>JD Match %:</b> <span id="jdMatch"></span></p>
-  <p><b>Resume Completeness:</b> <span id="completeness"></span></p>
-  <p><b>Last Saved:</b> <span id="lastSaved"></span></p>
-
-  <h4>Matched Keywords</h4>
-  <div id="matchedKeywords"></div>
-
-  <h4>Missing Keywords</h4>
-  <div id="missingKeywords"></div>
 </div>
 
 <!-- UPGRADE -->
@@ -131,7 +93,6 @@
   <button onclick="upgradePlan()">Upgrade</button>
 </div>
 
-<!-- ✅ FOOTER -->
 <div class="box muted">
   ResumeIQ v1.0 • Last updated: <span id="buildDate"></span>
 </div>
@@ -139,7 +100,10 @@
 <script>
 document.getElementById("buildDate").textContent = new Date().toLocaleDateString();
 
-/* 🔒 EXISTING JS — UNCHANGED BELOW */
+/* 🔑 Razorpay Test Key */
+const RAZORPAY_KEY = "rzp_test_XXXXXXXXXX";
+
+/* PLANS */
 const PLANS = {
   49:{name:"One-Time",days:1,ai:3},
   99:{name:"Weekly",days:7,ai:10},
@@ -150,18 +114,71 @@ const PLANS = {
   1699:{name:"Yearly",days:365,ai:999}
 };
 
+/* Default plan */
 if(!localStorage.getItem("plan")){
-  localStorage.setItem("plan",JSON.stringify({price:49,name:"One-Time",expiry:null,aiLeft:3}));
+  localStorage.setItem("plan",JSON.stringify({
+    price:49,
+    name:"One-Time",
+    expiry:null,
+    aiLeft:3
+  }));
+}
+
+/* Helpers */
+function getPlanByPrice(price){
+  return PLANS[price];
 }
 
 function renderPlan(){
-  const p=JSON.parse(localStorage.getItem("plan"));
-  plan.textContent=`₹${p.price} (${p.name})`;
-  expiry.textContent=p.expiry?new Date(p.expiry).toLocaleDateString():"One-time (no expiry)";
-  aiLeft.textContent=p.aiLeft;
+  const p = JSON.parse(localStorage.getItem("plan"));
+  plan.textContent = `₹${p.price} (${p.name})`;
+  expiry.textContent = p.expiry
+    ? new Date(p.expiry).toLocaleDateString()
+    : "One-time (no expiry)";
+  aiLeft.textContent = p.aiLeft;
 }
 
-/* rest of your JS remains unchanged */
+/* Razorpay Checkout */
+function upgradePlan(){
+  const price = upgradeSelect.value;
+  const selectedPlan = getPlanByPrice(price);
+
+  if(!selectedPlan){
+    alert("Invalid plan");
+    return;
+  }
+
+  const options = {
+    key: RAZORPAY_KEY,
+    amount: price * 100,
+    currency: "INR",
+    name: "ResumeIQ",
+    description: `${selectedPlan.name} Plan`,
+
+    handler: function(){
+      const expiry = selectedPlan.days
+        ? Date.now() + selectedPlan.days * 86400000
+        : null;
+
+      localStorage.setItem("plan",JSON.stringify({
+        price,
+        name: selectedPlan.name,
+        expiry,
+        aiLeft: selectedPlan.ai
+      }));
+
+      alert("🎉 Payment successful! Plan activated.");
+      renderPlan();
+    },
+
+    theme:{ color:"#0f172a" }
+  };
+
+  new Razorpay(options).open();
+}
+
+/* Init */
+renderPlan();
 </script>
 
 </body>
