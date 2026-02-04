@@ -5,7 +5,7 @@
 
   <!-- SEO -->
   <title>ResumeIQ – ATS Resume Builder & JD Matcher</title>
-  <meta name="description" content="ResumeIQ helps you optimize your resume for ATS systems." />
+  <meta name="description" content="ResumeIQ helps you optimize your resume ATS score." />
 
   <style>
     body {
@@ -19,6 +19,7 @@
       width: 100%;
       margin: 8px 0;
       padding: 10px;
+      font-size: 14px;
     }
     button:disabled {
       opacity: 0.5;
@@ -31,7 +32,7 @@
       border-radius: 8px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     }
-    .muted { color:#666; font-size:14px; }
+    .muted { color: #666; font-size: 14px; }
   </style>
 
   <!-- PDF -->
@@ -43,60 +44,92 @@
 <body>
 
 <h2>ATS Resume Builder</h2>
-<p class="muted">Day 10.4 – Secure Payment Verification</p>
+<p class="muted">Improve your resume ATS score and match job descriptions in seconds.</p>
 
 <input id="name" placeholder="Name" />
 <input id="role" placeholder="Target Role" />
 <textarea id="summary" placeholder="Professional Summary"></textarea>
 <button id="rewriteBtn" onclick="rewriteSummary()">✨ Rewrite Summary (AI)</button>
 
+<textarea id="jd" placeholder="Job Description"></textarea>
+<textarea id="experience" placeholder="Experience"></textarea>
+<input id="skills" placeholder="Skills (comma separated)" />
+
+<button onclick="saveResume()">Save Resume</button>
 <button id="pdfBtn" onclick="downloadPDF()">Download Resume (PDF)</button>
 
+<!-- PLAN -->
 <div class="box">
   <h3>Current Plan</h3>
   <p><b>Plan:</b> <span id="plan"></span></p>
-  <p><b>Status:</b> <span id="payStatus"></span></p>
-  <p><b>AI Left:</b> <span id="aiLeft"></span></p>
+  <p><b>Plan Expiry:</b> <span id="expiry"></span></p>
+  <p><b>AI Rewrites Left:</b> <span id="aiLeft"></span></p>
+  <p><b>Payment Status:</b> <span id="payStatus"></span></p>
 </div>
 
+<!-- UPGRADE -->
 <div class="box">
   <h3>Upgrade Plan</h3>
   <select id="upgradeSelect">
     <option value="49">₹49 – One Time</option>
-    <option value="99">₹99 – Weekly</option>
+    <option value="99">₹99 – 1 Week</option>
+    <option value="149">₹149 – 15 Days</option>
+    <option value="299">₹299 – 1 Month</option>
+    <option value="699">₹699 – 3 Months</option>
+    <option value="999">₹999 – 6 Months</option>
+    <option value="1699">₹1699 – 1 Year</option>
   </select>
   <button onclick="upgradePlan()">Upgrade</button>
 </div>
 
+<div class="box muted">
+  ResumeIQ v1.0 • Last updated: <span id="buildDate"></span>
+</div>
+
 <script>
+document.getElementById("buildDate").textContent = new Date().toLocaleDateString();
+
 /* Razorpay TEST Key */
 const RAZORPAY_KEY = "rzp_test_SC2mAeZLsa3z1e";
 
-/* Plans */
+/* PLANS */
 const PLANS = {
-  49:{name:"One-Time",ai:3},
-  99:{name:"Weekly",ai:10}
+  49:{name:"One-Time",days:1,ai:3},
+  99:{name:"Weekly",days:7,ai:10},
+  149:{name:"15 Days",days:15,ai:25},
+  299:{name:"Monthly",days:30,ai:50},
+  699:{name:"3 Months",days:90,ai:120},
+  999:{name:"6 Months",days:180,ai:250},
+  1699:{name:"Yearly",days:365,ai:999}
 };
 
-/* Default Plan */
+/* DEFAULT PLAN */
 if(!localStorage.getItem("plan")){
-  localStorage.setItem("plan", JSON.stringify({
-    name:"Free",
-    aiLeft:1,
-    paymentStatus:"none"
+  localStorage.setItem("plan",JSON.stringify({
+    price:49,
+    name:"One-Time",
+    expiry:null,
+    aiLeft:3,
+    paymentStatus:"none",
+    paymentId:null
   }));
 }
 
-/* Helpers */
+/* HELPERS */
 function getPlan(){
   return JSON.parse(localStorage.getItem("plan"));
 }
+
 function savePlan(p){
-  localStorage.setItem("plan", JSON.stringify(p));
+  localStorage.setItem("plan",JSON.stringify(p));
 }
-function render(){
+
+function renderPlan(){
   const p = getPlan();
-  plan.textContent = p.name;
+  plan.textContent = `₹${p.price} (${p.name})`;
+  expiry.textContent = p.expiry
+    ? new Date(p.expiry).toLocaleDateString()
+    : "One-time";
   aiLeft.textContent = p.aiLeft;
   payStatus.textContent = p.paymentStatus;
 
@@ -104,68 +137,84 @@ function render(){
   pdfBtn.disabled = p.aiLeft <= 0;
 }
 
-/* AI */
+/* AI REWRITE */
 function rewriteSummary(){
   const p = getPlan();
   if(p.aiLeft <= 0){
-    alert("Upgrade required");
+    alert("⚠️ AI limit reached. Please upgrade.");
     return;
   }
-  summary.value += " (AI optimized)";
+  summary.value = summary.value
+    ? summary.value + " (AI optimized)"
+    : "AI optimized professional summary.";
   p.aiLeft--;
   savePlan(p);
-  render();
+  renderPlan();
 }
 
 /* PDF */
 function downloadPDF(){
   const p = getPlan();
   if(p.aiLeft <= 0){
-    alert("Upgrade required");
+    alert("⚠️ Upgrade required.");
     return;
   }
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF();
-  pdf.text(summary.value || "Resume",10,10);
+  pdf.text(`Name: ${name.value}`,10,10);
+  pdf.text(`Role: ${role.value}`,10,20);
+  pdf.text(`Summary: ${summary.value}`,10,30);
   pdf.save("resume.pdf");
 }
 
-/* MOCK PAYMENT VERIFICATION (replace with backend later) */
-function verifyPayment(paymentId){
-  console.log("Verifying payment:", paymentId);
-  return true; // ✅ simulated success
+/* SAVE */
+function saveResume(){
+  alert("Resume saved locally (demo).");
 }
 
-/* Upgrade Flow */
+/* MOCK VERIFICATION (Day 10.4) */
+function verifyPayment(paymentId){
+  console.log("Verifying payment:", paymentId);
+  return true; // simulate backend verification
+}
+
+/* RAZORPAY */
 function upgradePlan(){
   const price = upgradeSelect.value;
   const planDef = PLANS[price];
+  if(!planDef) return alert("Invalid plan");
 
   const options = {
     key: RAZORPAY_KEY,
     amount: price * 100,
     currency: "INR",
     name: "ResumeIQ",
+    description: `${planDef.name} Plan`,
     handler: function(resp){
 
-      // Step 1: mark pending
+      // Step 1: mark payment pending
       const p = getPlan();
       p.paymentStatus = "pending";
+      p.paymentId = resp.razorpay_payment_id;
       savePlan(p);
-      render();
+      renderPlan();
 
       // Step 2: verify
       const verified = verifyPayment(resp.razorpay_payment_id);
 
       if(verified){
+        p.price = price;
         p.name = planDef.name;
+        p.expiry = planDef.days
+          ? Date.now() + planDef.days * 86400000
+          : null;
         p.aiLeft = planDef.ai;
         p.paymentStatus = "verified";
         savePlan(p);
         alert("✅ Payment verified. Plan activated.");
-        render();
+        renderPlan();
       } else {
-        alert("❌ Payment verification failed");
+        alert("❌ Payment verification failed.");
       }
     }
   };
@@ -173,8 +222,8 @@ function upgradePlan(){
   new Razorpay(options).open();
 }
 
-/* Init */
-render();
+/* INIT */
+renderPlan();
 </script>
 
 </body>
