@@ -29,7 +29,10 @@ window.serverMe = null;
 function lockApp() {
   rewriteBtn.disabled = true;
   rewriteBtn.innerText = "🔒 Upgrade to use AI";
-  upgradeModal.style.display = "flex";
+
+  if (!sessionStorage.getItem("upgradeDismissed")) {
+    upgradeModal.style.display = "flex";
+  }
 }
 
 function unlockApp() {
@@ -149,6 +152,26 @@ rewriteBtn.addEventListener("click", async () => {
     console.error("AI call failed", err);
   }
 });
+
+/* =====================================================
+   MODAL ACTIONS (FIX)
+   ===================================================== */
+
+function closeUpgradeModal() {
+  upgradeModal.style.display = "none";
+  sessionStorage.setItem("upgradeDismissed", "true");
+}
+
+async function startCheckout() {
+  // For now, redirect user to pricing section
+  // (Razorpay wiring already exists elsewhere)
+  upgradeModal.style.display = "none";
+
+  // Scroll to pricing
+  document
+    .querySelector(".pricing-grid")
+    ?.scrollIntoView({ behavior: "smooth" });
+}
 
 /* =====================================================
    LOAD
