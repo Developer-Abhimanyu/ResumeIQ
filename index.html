@@ -30,7 +30,7 @@
     <textarea id="summary" placeholder="Brief summary..."></textarea>
 
     <!-- 🔒 LOCKED BY DEFAULT -->
-    <button id="rewriteBtn" disabled>
+    <button id="rewriteBtn" type="button">
       🔒 Upgrade to use AI
     </button>
 
@@ -75,44 +75,23 @@
       Recruiter-approved formats • Unlimited exports • Faster shortlisting
     </p>
 
-    <div class="billing-toggle">
-      <span>Monthly</span>
-      <label class="switch">
-        <input type="checkbox" id="billingToggle" />
-        <span class="slider"></span>
-      </label>
-      <span>Annual <b>(Save 25%)</b></span>
-    </div>
+    <div class="pricing-grid"></div>
 
-    <div class="pricing-grid">
-      <div class="pricing-card recommended">
-        <h4>Pro Plan</h4>
-        <div class="price">
-          ₹<span id="priceDisplay">299</span>
-        </div>
-        <p class="muted">
-          Unlimited AI rewrites<br />
-          Advanced ATS optimization<br />
-          Priority processing
-        </p>
-        <button onclick="startCheckout()">Upgrade & Unlock ATS Boost</button>
-      </div>
-    </div>
-  </div>
+ <!-- Upgrade Modal -->
+<div id="upgradeModal" class="modal-backdrop hidden">
+  <div class="upgrade-modal">
 
-  <div class="modal-backdrop" id="upgradeModal" style="display:none;">
-    <div class="upgrade-modal">
-      <h3>⚠️ Upgrade Required</h3>
-      <p>
-        Your plan is inactive or expired.<br />
-        Upgrade to unlock AI features.
-      </p>
-      <div class="actions">
-        <button onclick="startCheckout()">Upgrade Now</button>
-        <div class="pricing-grid"></div>
-      </div>
-    </div>
+    <button class="modal-close" onclick="closeUpgradeModal()">×</button>
+
+    <h3>⚠️ Upgrade Required</h3>
+    <p>
+      Your plan is inactive or expired.<br />
+      Choose a plan to unlock AI features.
+    </p>
+
+    <button onclick="scrollToPlans()">View Plans</button>
   </div>
+</div>
 
   <script src="app.js"></script>
 </body>

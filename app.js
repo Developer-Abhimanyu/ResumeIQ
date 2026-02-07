@@ -8,7 +8,6 @@ const aiLeftEl = document.getElementById("aiLeft");
 
 const rewriteBtn = document.getElementById("rewriteBtn");
 const summary = document.getElementById("summary");
-const pdfBtn = document.getElementById("pdfBtn");
 
 const upgradeModal = document.getElementById("upgradeModal");
 const pricingGrid = document.querySelector(".pricing-grid");
@@ -19,31 +18,28 @@ const pricingGrid = document.querySelector(".pricing-grid");
 
 let PLANS = {};
 let selectedPlanId = null;
-let modalDismissed = false;
 window.serverMe = null;
 
 /* =====================================================
    PAYWALL
 ===================================================== */
 
-function lockApp(showModal = true) {
-  rewriteBtn.disabled = true;
-  rewriteBtn.innerText = "🔒 Upgrade to use AI";
-
-  if (showModal && !modalDismissed) {
-    upgradeModal.style.display = "flex";
-  }
-}
-
-function unlockApp() {
-  rewriteBtn.disabled = false;
-  rewriteBtn.innerText = "✨ Rewrite Summary (AI)";
-  upgradeModal.style.display = "none";
+function showUpgradeModal() {
+  upgradeModal.classList.remove("hidden");
 }
 
 function closeUpgradeModal() {
-  modalDismissed = true;
-  upgradeModal.style.display = "none";
+  upgradeModal.classList.add("hidden");
+}
+
+function lockApp(showModal = false) {
+  rewriteBtn.innerText = "🔒 Upgrade to use AI";
+  if (showModal) showUpgradeModal();
+}
+
+function unlockApp() {
+  rewriteBtn.innerText = "✨ Rewrite Summary (AI)";
+  closeUpgradeModal();
 }
 
 /* =====================================================
@@ -56,26 +52,40 @@ async function loadPlans() {
 
   pricingGrid.innerHTML = "";
 
-  Object.entries(PLANS).forEach(([id, plan], index) => {
+  let isFirst = true;
+
+  Object.entries(PLANS).forEach(([id, plan]) => {
     const card = document.createElement("div");
     card.className = "pricing-card";
-    if (index === 2) card.classList.add("recommended");
-
+    card.dataset.planId = id;
     card.innerHTML = `
       <h4>${plan.label}</h4>
       <div class="price">₹${plan.price}</div>
       <p class="muted">${plan.days} days access</p>
-      <button onclick="selectPlan('${id}')">Choose Plan</button>
+      <button>Choose Plan</button>
     `;
+
+   card.onclick = () => {
+  selectPlan(id);
+};
 
     pricingGrid.appendChild(card);
   });
+const firstPlanId = Object.keys(PLANS)[0];
+if (firstPlanId) {
+  selectPlan(firstPlanId);
+}
 }
 
 function selectPlan(planId) {
   selectedPlanId = planId;
-  modalDismissed = false;
-  startCheckout();
+
+  document.querySelectorAll(".pricing-card").forEach(card => {
+    card.classList.toggle(
+      "selected",
+      card.dataset.planId === planId
+    );
+  });
 }
 
 /* =====================================================
@@ -84,41 +94,48 @@ function selectPlan(planId) {
 
 async function checkPaywall() {
   const email = localStorage.getItem("email");
-  if (!email) return lockApp();
+  if (!email) {
+    lockApp();
+    updatePlanUI(null);
+    return;
+  }
 
   const res = await fetch(`http://localhost:4242/me?email=${email}`);
   const me = await res.json();
   window.serverMe = me;
 
-  me.active ? unlockApp() : lockApp(false);
-  updatePlanUI();
+  if (me.active) unlockApp();
+  else lockApp();
+
+  updatePlanUI(me);
 }
 
 /* =====================================================
    UI
 ===================================================== */
 
-function updatePlanUI() {
-  if (!window.serverMe?.active) {
+function updatePlanUI(me) {
+  if (!me?.active) {
     planEl.innerText = "LOCKED";
     expiryEl.innerText = "—";
     aiLeftEl.innerText = "0";
     return;
   }
 
-  planEl.innerText = window.serverMe.plan.name;
-  expiryEl.innerText = new Date(
-    window.serverMe.plan.expiresAt
-  ).toLocaleDateString();
+  planEl.innerText = me.plan.name;
+  expiryEl.innerText = new Date(me.plan.expiresAt).toLocaleDateString();
   aiLeftEl.innerText = "Unlimited";
 }
 
 /* =====================================================
-   AI
+   AI BUTTON
 ===================================================== */
 
 rewriteBtn.addEventListener("click", async () => {
-  if (!window.serverMe?.active) return lockApp();
+  if (!window.serverMe?.active) {
+    showUpgradeModal();
+    return;
+  }
 
   const res = await fetch("http://localhost:4242/use-ai", {
     method: "POST",
@@ -129,7 +146,6 @@ rewriteBtn.addEventListener("click", async () => {
     })
   });
 
-  if (!res.ok) return lockApp();
   const data = await res.json();
   summary.value = data.result;
 });
@@ -139,10 +155,8 @@ rewriteBtn.addEventListener("click", async () => {
 ===================================================== */
 
 async function startCheckout() {
-  if (!selectedPlanId) return;
-
   const email = localStorage.getItem("email");
-  if (!email) return alert("Please login first");
+  if (!email || !selectedPlanId) return;
 
   const res = await fetch("http://localhost:4242/create-order", {
     method: "POST",
@@ -157,15 +171,11 @@ async function startCheckout() {
     amount: order.amount,
     currency: order.currency,
     order_id: order.orderId,
-    handler: async function (response) {
+    handler: async (response) => {
       await fetch("http://localhost:4242/verify-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...response,
-          planId: selectedPlanId,
-          email
-        })
+        body: JSON.stringify({ ...response, planId: selectedPlanId, email })
       });
 
       alert("✅ Payment successful");
@@ -174,6 +184,15 @@ async function startCheckout() {
   });
 
   rzp.open();
+}
+
+/* =====================================================
+   SCROLL
+===================================================== */
+
+function scrollToPlans() {
+  closeUpgradeModal();
+  pricingGrid.scrollIntoView({ behavior: "smooth" });
 }
 
 /* =====================================================
