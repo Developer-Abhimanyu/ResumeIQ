@@ -5,26 +5,20 @@
   <title>ResumeIQ – ATS Resume Builder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Styles -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-  <!-- Razorpay (kept intact) -->
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 
 <body>
 
-  <!-- ================= HEADER ================= -->
   <h2>ATS Resume Builder</h2>
   <p class="muted">
     Optimize your resume for ATS and recruiters.  
     <b>25%+ higher shortlisting rate</b> on average.
   </p>
 
-  <!-- ================= FORM ================= -->
   <div class="box">
     <label>Name</label>
     <input id="name" placeholder="John Doe" />
@@ -34,7 +28,11 @@
 
     <label>Professional Summary</label>
     <textarea id="summary" placeholder="Brief summary..."></textarea>
-    <button id="rewriteBtn">✨ Rewrite Summary (AI)</button>
+
+    <!-- 🔒 LOCKED BY DEFAULT -->
+    <button id="rewriteBtn" disabled>
+      🔒 Upgrade to use AI
+    </button>
 
     <label>Job Description</label>
     <textarea id="jd" placeholder="Paste JD here"></textarea>
@@ -49,7 +47,6 @@
     <button id="pdfBtn">Download Resume (PDF)</button>
   </div>
 
-  <!-- ================= PLAN & USAGE ================= -->
   <div class="box">
     <h3>Your Plan</h3>
     <p><b>Plan:</b> <span id="plan"></span></p>
@@ -72,14 +69,12 @@
     </div>
   </div>
 
-  <!-- ================= PRICING ================= -->
   <div class="box">
     <h3>Upgrade & Unlock Full Power</h3>
     <p class="muted">
       Recruiter-approved formats • Unlimited exports • Faster shortlisting
     </p>
 
-    <!-- Billing Toggle -->
     <div class="billing-toggle">
       <span>Monthly</span>
       <label class="switch">
@@ -103,45 +98,20 @@
         <button onclick="startCheckout()">Upgrade & Unlock ATS Boost</button>
       </div>
     </div>
-
-    <div class="trust-badges">
-      🔒 Secure payments • 💳 Cards / UPI • Cancel anytime
-    </div>
   </div>
 
-  <!-- ================= BILLING ================= -->
-  <div class="billing-box">
-    <h4>Billing & Payments</h4>
-    <div class="payment-card">
-      <div>
-        <b>Secure Checkout</b><br />
-        <span>Powered by Razorpay</span>
-      </div>
-      <span>256-bit SSL</span>
-    </div>
-
-    <div class="trust-badges">
-      PCI-DSS compliant • Instant activation • GST invoice
-    </div>
-  </div>
-
-  <!-- ================= UPGRADE MODAL ================= -->
   <div class="modal-backdrop" id="upgradeModal" style="display:none;">
     <div class="upgrade-modal">
-      <h3>⚠️ Low AI Credits</h3>
+      <h3>⚠️ Upgrade Required</h3>
       <p>
-        You’re running low on AI credits.  
-        Upgrade now to avoid interruptions.
+        Your plan is inactive or expired.<br />
+        Upgrade to unlock AI features.
       </p>
       <div class="actions">
         <button onclick="startCheckout()">Upgrade Now</button>
-        <button class="secondary" onclick="closeUpgradeModal()">Maybe Later</button>
+        <button class="secondary" onclick="closeUpgradeModal()">Later</button>
       </div>
     </div>
-  </div>
-
-  <div class="box muted">
-    ResumeIQ v1.0<span id="buildDate"></span>
   </div>
 
   <script src="app.js"></script>

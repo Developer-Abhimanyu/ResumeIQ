@@ -13,56 +13,61 @@ const upgradeModal = document.getElementById("upgradeModal");
 const billingToggle = document.getElementById("billingToggle");
 const priceDisplay = document.getElementById("priceDisplay");
 
+const rewriteBtn = document.getElementById("rewriteBtn");
+const summary = document.getElementById("summary");
+
 /* =====================================================
    GLOBAL STATE
    ===================================================== */
 
-window.resumeData = null;
-window.lastSavedTime = null;
+window.serverMe = null;
 
 /* =====================================================
-   PLANS (SOURCE OF TRUTH)
+   PAYWALL CONTROL
    ===================================================== */
 
-const PLANS = {
-  MONTHLY: {
-    id: "pro_monthly",
-    label: "Pro Monthly",
-    price: 299,
-    days: 30,
-    ai: 50
-  },
-  ANNUAL: {
-    id: "pro_annual",
-    label: "Pro Annual",
-    price: 2999,
-    days: 365,
-    ai: 999
-  }
-};
-
-/* =====================================================
-   USER PLAN
-   ===================================================== */
-
-let userPlan = JSON.parse(localStorage.getItem("userPlan")) || {
-  name: "FREE",
-  expiresAt: null,
-  aiLeft: 2,
-  aiTotal: 2
-};
-
-/* =====================================================
-   PLAN HELPERS
-   ===================================================== */
-
-function isProActive() {
-  return userPlan.name !== "FREE" && userPlan.expiresAt > Date.now();
+function lockApp() {
+  rewriteBtn.disabled = true;
+  rewriteBtn.innerText = "🔒 Upgrade to use AI";
+  upgradeModal.style.display = "flex";
 }
 
-function creditsPercentLeft() {
-  if (!userPlan.aiTotal) return 0;
-  return Math.round((userPlan.aiLeft / userPlan.aiTotal) * 100);
+function unlockApp() {
+  rewriteBtn.disabled = false;
+  rewriteBtn.innerText = "✨ Rewrite Summary (AI)";
+}
+
+/* =====================================================
+   SERVER PAYWALL CHECK
+   ===================================================== */
+
+async function checkPaywall() {
+  const email = localStorage.getItem("email");
+
+  if (!email) {
+    lockApp();
+    return;
+  }
+
+  try {
+    const res = await fetch(
+      `http://localhost:4242/me?email=${email}`
+    );
+
+    const me = await res.json();
+    window.serverMe = me;
+
+    if (!me.active) {
+      lockApp();
+    } else {
+      unlockApp();
+    }
+
+    updatePlanUI();
+  } catch (err) {
+    console.error("Paywall check failed", err);
+    lockApp();
+  }
 }
 
 /* =====================================================
@@ -70,52 +75,38 @@ function creditsPercentLeft() {
    ===================================================== */
 
 function updatePlanUI() {
-  planEl.innerText = userPlan.name;
-  expiryEl.innerText = userPlan.expiresAt
-    ? new Date(userPlan.expiresAt).toLocaleDateString()
-    : "—";
-  aiLeftEl.innerText = userPlan.aiLeft;
+  if (window.serverMe?.active) {
+    planEl.innerText = window.serverMe.plan.name;
+    expiryEl.innerText = new Date(
+      window.serverMe.plan.expiresAt
+    ).toLocaleDateString();
+    aiLeftEl.innerText = window.serverMe.aiCredits;
+  } else {
+    planEl.innerText = "LOCKED";
+    expiryEl.innerText = "—";
+    aiLeftEl.innerText = "0";
+  }
 
   updateUsageMeter();
 }
 
 function updateUsageMeter() {
-  const percent = creditsPercentLeft();
-  usageFill.style.width = `${percent}%`;
-
-  const box = usageFill.closest(".usage-box");
-  box.classList.remove("usage-warning", "usage-critical");
-
-  if (percent <= 20) {
-    box.classList.add("usage-critical");
-    usageLabel.innerText = "Critically low credits";
-    autoShowUpgradeModal();
-  } else if (percent <= 40) {
-    box.classList.add("usage-warning");
-    usageLabel.innerText = "Running low on credits";
-  } else {
-    usageLabel.innerText = "Credits remaining";
+  if (!window.serverMe?.active) {
+    usageFill.style.width = "0%";
+    usageLabel.innerText = "Upgrade to unlock AI";
+    return;
   }
+
+  const percent = Math.round(
+    (window.serverMe.aiCredits / window.serverMe.aiTotal) * 100
+  );
+
+  usageFill.style.width = `${percent}%`;
+  usageLabel.innerText = "Credits remaining";
 }
 
 /* =====================================================
-   UPGRADE MODAL
-   ===================================================== */
-
-function autoShowUpgradeModal() {
-  if (isProActive()) return;
-  if (sessionStorage.getItem("upgradeModalShown")) return;
-
-  upgradeModal.style.display = "flex";
-  sessionStorage.setItem("upgradeModalShown", "true");
-}
-
-function closeUpgradeModal() {
-  upgradeModal.style.display = "none";
-}
-
-/* =====================================================
-   BILLING TOGGLE
+   BILLING UI
    ===================================================== */
 
 function updatePricingUI() {
@@ -125,101 +116,45 @@ function updatePricingUI() {
 billingToggle.addEventListener("change", updatePricingUI);
 
 /* =====================================================
-   RAZORPAY CHECKOUT
+   AI CALL — SERVER ENFORCED (STEP 5)
    ===================================================== */
 
-async function startCheckout() {
-  const plan = billingToggle.checked ? PLANS.ANNUAL : PLANS.MONTHLY;
+rewriteBtn.addEventListener("click", async () => {
+  if (!window.serverMe?.active) {
+    lockApp();
+    return;
+  }
 
   try {
-    const res = await fetch("http://localhost:4242/create-order", {
+    const res = await fetch("http://localhost:4242/use-ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ planId: plan.id })
+      body: JSON.stringify({
+        email: localStorage.getItem("email"),
+        text: summary.value
+      })
     });
 
     const data = await res.json();
 
-    const options = {
-      key: data.key,
-      amount: data.amount,
-      currency: data.currency,
-      name: "ResumeIQ",
-      description: plan.label,
-      order_id: data.orderId,
-      handler: async function (response) {
-        const verifyRes = await fetch("http://localhost:4242/verify-payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...response,
-            planId: plan.id
-          })
-        });
+    if (!res.ok) {
+      lockApp();
+      return;
+    }
 
-        const verifyData = await verifyRes.json();
-
-        if (verifyData.success) {
-          activatePlan(plan);
-          alert("🎉 Payment successful! Plan activated.");
-        } else {
-          alert("Payment verification failed");
-        }
-      },
-      theme: { color: "#4f46e5" }
-    };
-
-    const rzp = new Razorpay(options);
-    rzp.open();
+    summary.value = data.result;
+    window.serverMe.aiCredits = data.creditsLeft;
+    updatePlanUI();
   } catch (err) {
-    console.error(err);
-    alert("Unable to start payment");
+    console.error("AI call failed", err);
   }
-}
-
-/* =====================================================
-   PLAN ACTIVATION
-   ===================================================== */
-
-function activatePlan(plan) {
-  userPlan = {
-    name: plan.label,
-    expiresAt: Date.now() + plan.days * 86400000,
-    aiLeft: plan.ai,
-    aiTotal: plan.ai
-  };
-
-  localStorage.setItem("userPlan", JSON.stringify(userPlan));
-  updatePlanUI();
-  closeUpgradeModal();
-}
-
-/* =====================================================
-   AI MOCK
-   ===================================================== */
-
-function aiRewriteSummary(text) {
-  return `ATS-optimized professional summary:\n${text}`;
-}
-
-rewriteBtn.addEventListener("click", () => {
-  if (!isProActive() && userPlan.aiLeft <= 0) {
-    autoShowUpgradeModal();
-    return;
-  }
-
-  summary.value = aiRewriteSummary(summary.value);
-  userPlan.aiLeft--;
-
-  localStorage.setItem("userPlan", JSON.stringify(userPlan));
-  updatePlanUI();
 });
 
 /* =====================================================
    LOAD
    ===================================================== */
 
-window.onload = () => {
+window.onload = async () => {
   updatePricingUI();
-  updatePlanUI();
+  await checkPaywall();
 };
