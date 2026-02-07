@@ -1,30 +1,30 @@
 export const PLANS = {
   one_time: {
     label: "One Time",
-    price: 49,
+    price: 99,
   },
   weekly: {
     label: "7 Days",
-    price: 99,
+    price: 199,
   },
   fifteen_days: {
     label: "15 Days",
-    price: 149,
+    price: 299,
   },
   monthly: {
     label: "1 Month",
-    price: 299,
+    price: 499,
   },
   three_months: {
     label: "3 Months",
-    price: 699,
+    price: 999,
   },
   six_months: {
     label: "6 Months",
-    price: 999,
+    price: 1499,
   },
   yearly: {
     label: "1 Year",
-    price: 1699,
+    price: 1999,
   },
 };

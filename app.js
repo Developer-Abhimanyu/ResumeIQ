@@ -1,36 +1,36 @@
 /* =====================================================
-   DOM REFERENCES
-   ===================================================== */
+   DOM
+===================================================== */
 
 const planEl = document.getElementById("plan");
 const expiryEl = document.getElementById("expiry");
 const aiLeftEl = document.getElementById("aiLeft");
 
-const usageFill = document.getElementById("usageFill");
-const usageLabel = document.getElementById("usageLabel");
-
-const upgradeModal = document.getElementById("upgradeModal");
-const billingToggle = document.getElementById("billingToggle");
-const priceDisplay = document.getElementById("priceDisplay");
-
 const rewriteBtn = document.getElementById("rewriteBtn");
 const summary = document.getElementById("summary");
+const pdfBtn = document.getElementById("pdfBtn");
+
+const upgradeModal = document.getElementById("upgradeModal");
+const pricingGrid = document.querySelector(".pricing-grid");
 
 /* =====================================================
-   GLOBAL STATE
-   ===================================================== */
+   STATE
+===================================================== */
 
+let PLANS = {};
+let selectedPlanId = null;
+let modalDismissed = false;
 window.serverMe = null;
 
 /* =====================================================
-   PAYWALL CONTROL
-   ===================================================== */
+   PAYWALL
+===================================================== */
 
-function lockApp() {
+function lockApp(showModal = true) {
   rewriteBtn.disabled = true;
   rewriteBtn.innerText = "🔒 Upgrade to use AI";
 
-  if (!sessionStorage.getItem("upgradeDismissed")) {
+  if (showModal && !modalDismissed) {
     upgradeModal.style.display = "flex";
   }
 }
@@ -38,146 +38,149 @@ function lockApp() {
 function unlockApp() {
   rewriteBtn.disabled = false;
   rewriteBtn.innerText = "✨ Rewrite Summary (AI)";
+  upgradeModal.style.display = "none";
+}
+
+function closeUpgradeModal() {
+  modalDismissed = true;
+  upgradeModal.style.display = "none";
 }
 
 /* =====================================================
-   SERVER PAYWALL CHECK
-   ===================================================== */
+   LOAD PLANS
+===================================================== */
+
+async function loadPlans() {
+  const res = await fetch("http://localhost:4242/plans");
+  PLANS = await res.json();
+
+  pricingGrid.innerHTML = "";
+
+  Object.entries(PLANS).forEach(([id, plan], index) => {
+    const card = document.createElement("div");
+    card.className = "pricing-card";
+    if (index === 2) card.classList.add("recommended");
+
+    card.innerHTML = `
+      <h4>${plan.label}</h4>
+      <div class="price">₹${plan.price}</div>
+      <p class="muted">${plan.days} days access</p>
+      <button onclick="selectPlan('${id}')">Choose Plan</button>
+    `;
+
+    pricingGrid.appendChild(card);
+  });
+}
+
+function selectPlan(planId) {
+  selectedPlanId = planId;
+  modalDismissed = false;
+  startCheckout();
+}
+
+/* =====================================================
+   PAYWALL CHECK
+===================================================== */
 
 async function checkPaywall() {
   const email = localStorage.getItem("email");
+  if (!email) return lockApp();
 
-  if (!email) {
-    lockApp();
-    return;
-  }
+  const res = await fetch(`http://localhost:4242/me?email=${email}`);
+  const me = await res.json();
+  window.serverMe = me;
 
-  try {
-    const res = await fetch(
-      `http://localhost:4242/me?email=${email}`
-    );
-
-    const me = await res.json();
-    window.serverMe = me;
-
-    if (!me.active) {
-      lockApp();
-    } else {
-      unlockApp();
-    }
-
-    updatePlanUI();
-  } catch (err) {
-    console.error("Paywall check failed", err);
-    lockApp();
-  }
+  me.active ? unlockApp() : lockApp(false);
+  updatePlanUI();
 }
 
 /* =====================================================
-   UI UPDATE
-   ===================================================== */
+   UI
+===================================================== */
 
 function updatePlanUI() {
-  if (window.serverMe?.active) {
-    planEl.innerText = window.serverMe.plan.name;
-    expiryEl.innerText = new Date(
-      window.serverMe.plan.expiresAt
-    ).toLocaleDateString();
-    aiLeftEl.innerText = window.serverMe.aiCredits;
-  } else {
+  if (!window.serverMe?.active) {
     planEl.innerText = "LOCKED";
     expiryEl.innerText = "—";
     aiLeftEl.innerText = "0";
-  }
-
-  updateUsageMeter();
-}
-
-function updateUsageMeter() {
-  if (!window.serverMe?.active) {
-    usageFill.style.width = "0%";
-    usageLabel.innerText = "Upgrade to unlock AI";
     return;
   }
 
-  const percent = Math.round(
-    (window.serverMe.aiCredits / window.serverMe.aiTotal) * 100
-  );
-
-  usageFill.style.width = `${percent}%`;
-  usageLabel.innerText = "Credits remaining";
+  planEl.innerText = window.serverMe.plan.name;
+  expiryEl.innerText = new Date(
+    window.serverMe.plan.expiresAt
+  ).toLocaleDateString();
+  aiLeftEl.innerText = "Unlimited";
 }
 
 /* =====================================================
-   BILLING UI
-   ===================================================== */
-
-function updatePricingUI() {
-  priceDisplay.innerText = billingToggle.checked ? "249 / mo" : "299";
-}
-
-billingToggle.addEventListener("change", updatePricingUI);
-
-/* =====================================================
-   AI CALL — SERVER ENFORCED (STEP 5)
-   ===================================================== */
+   AI
+===================================================== */
 
 rewriteBtn.addEventListener("click", async () => {
-  if (!window.serverMe?.active) {
-    lockApp();
-    return;
-  }
+  if (!window.serverMe?.active) return lockApp();
 
-  try {
-    const res = await fetch("http://localhost:4242/use-ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: localStorage.getItem("email"),
-        text: summary.value
-      })
-    });
+  const res = await fetch("http://localhost:4242/use-ai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: localStorage.getItem("email"),
+      text: summary.value
+    })
+  });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      lockApp();
-      return;
-    }
-
-    summary.value = data.result;
-    window.serverMe.aiCredits = data.creditsLeft;
-    updatePlanUI();
-  } catch (err) {
-    console.error("AI call failed", err);
-  }
+  if (!res.ok) return lockApp();
+  const data = await res.json();
+  summary.value = data.result;
 });
 
 /* =====================================================
-   MODAL ACTIONS (FIX)
-   ===================================================== */
-
-function closeUpgradeModal() {
-  upgradeModal.style.display = "none";
-  sessionStorage.setItem("upgradeDismissed", "true");
-}
+   CHECKOUT
+===================================================== */
 
 async function startCheckout() {
-  // For now, redirect user to pricing section
-  // (Razorpay wiring already exists elsewhere)
-  upgradeModal.style.display = "none";
+  if (!selectedPlanId) return;
 
-  // Scroll to pricing
-  document
-    .querySelector(".pricing-grid")
-    ?.scrollIntoView({ behavior: "smooth" });
+  const email = localStorage.getItem("email");
+  if (!email) return alert("Please login first");
+
+  const res = await fetch("http://localhost:4242/create-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ planId: selectedPlanId, email })
+  });
+
+  const order = await res.json();
+
+  const rzp = new Razorpay({
+    key: order.key,
+    amount: order.amount,
+    currency: order.currency,
+    order_id: order.orderId,
+    handler: async function (response) {
+      await fetch("http://localhost:4242/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...response,
+          planId: selectedPlanId,
+          email
+        })
+      });
+
+      alert("✅ Payment successful");
+      await checkPaywall();
+    }
+  });
+
+  rzp.open();
 }
 
 /* =====================================================
-   LOAD
-   ===================================================== */
+   INIT
+===================================================== */
 
 window.onload = async () => {
-  updatePricingUI();
+  await loadPlans();
   await checkPaywall();
 };
