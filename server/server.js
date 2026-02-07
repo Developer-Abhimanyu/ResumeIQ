@@ -32,6 +32,44 @@ const PLANS = {
 };
 
 /* =========================
+   DAY 15 — PAID USER GUARD
+   ========================= */
+
+async function requireActiveSubscription(req, res, next) {
+  const email = req.body.email || req.query.email;
+
+  if (!email) {
+    return res.status(400).json({ error: "Email required" });
+  }
+
+  const sub = await db.get(
+    `SELECT expires_at FROM subscriptions WHERE user_email = ?`,
+    email
+  );
+
+  if (!sub) {
+    return res.status(403).json({
+      success: false,
+      reason: "NO_SUBSCRIPTION",
+    });
+  }
+
+  if (Date.now() > sub.expires_at) {
+    await db.run(
+      "DELETE FROM subscriptions WHERE user_email = ?",
+      email
+    );
+
+    return res.status(403).json({
+      success: false,
+      reason: "EXPIRED",
+    });
+  }
+
+  next(); // ✅ Paid & active
+}
+
+/* =========================
    REGISTER USER
    ========================= */
 
@@ -64,11 +102,11 @@ app.post("/register", async (req, res) => {
 app.post("/create-order", async (req, res) => {
   try {
     const { planId } = req.body;
-    const plan = PLANS[planId];
-
-    if (!plan) {
+    if (!planId || !PLANS[planId]) {
       return res.status(400).json({ error: "Invalid plan" });
     }
+
+    const plan = PLANS[planId];
 
     const order = await razorpay.orders.create({
       amount: plan.price * 100,
@@ -90,7 +128,7 @@ app.post("/create-order", async (req, res) => {
 });
 
 /* =========================
-   VERIFY PAYMENT (ACTIVATE PLAN)
+   VERIFY PAYMENT (HARDENED)
    ========================= */
 
 app.post("/verify-payment", async (req, res) => {
@@ -112,6 +150,16 @@ app.post("/verify-payment", async (req, res) => {
       return res.status(400).json({ error: "Invalid plan" });
     }
 
+    // 🛑 Prevent replay attacks
+    const existingPayment = await db.get(
+      "SELECT id FROM payments WHERE razorpay_payment_id = ?",
+      razorpay_payment_id
+    );
+
+    if (existingPayment) {
+      return res.status(409).json({ error: "Payment already processed" });
+    }
+
     // 🔐 Verify signature
     const body = `${razorpay_order_id}|${razorpay_payment_id}`;
 
@@ -121,10 +169,8 @@ app.post("/verify-payment", async (req, res) => {
       .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
-      return res.status(400).json({ success: false, error: "Invalid signature" });
+      return res.status(400).json({ error: "Invalid signature" });
     }
-
-    console.log("✅ Payment verified:", email, planId);
 
     // 👤 Ensure user exists
     const user = await db.get(
@@ -151,17 +197,15 @@ app.post("/verify-payment", async (req, res) => {
       ]
     );
 
-    // 🧹 Remove old subscription (single active plan)
+    // 🧹 Single active subscription
     await db.run(
       "DELETE FROM subscriptions WHERE user_email = ?",
       email
     );
 
-    // 📆 Calculate expiry (milliseconds)
     const expiresAt =
       Date.now() + plan.days * 24 * 60 * 60 * 1000;
 
-    // 🚀 Activate subscription (NO CREDITS)
     await db.run(
       `INSERT INTO subscriptions
        (user_email, plan_id, plan_name, expires_at)
@@ -198,32 +242,19 @@ app.get("/me", async (req, res) => {
       email
     );
 
-    // ❌ No subscription
     if (!sub) {
-      return res.json({
-        email,
-        active: false,
-        plan: null,
-      });
+      return res.json({ email, active: false, plan: null });
     }
 
-    // ⏰ Expired → auto-disable
     if (Date.now() > sub.expires_at) {
       await db.run(
         "DELETE FROM subscriptions WHERE user_email = ?",
         email
       );
 
-      console.log("⌛ Subscription expired:", email);
-
-      return res.json({
-        email,
-        active: false,
-        plan: null,
-      });
+      return res.json({ email, active: false, plan: null });
     }
 
-    // ✅ Active
     res.json({
       email,
       active: true,
@@ -240,46 +271,12 @@ app.get("/me", async (req, res) => {
 });
 
 /* =========================
-   USE AI (UNLIMITED, PAID ONLY)
+   USE AI (DAY 15 HARDENED)
    ========================= */
 
-app.post("/use-ai", async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: "Email required" });
-
-    const sub = await db.get(
-      `SELECT expires_at FROM subscriptions WHERE user_email = ?`,
-      email
-    );
-
-    // ❌ No subscription
-    if (!sub) {
-      return res.status(403).json({
-        success: false,
-        reason: "NO_SUBSCRIPTION",
-      });
-    }
-
-    // ⏰ Expired
-    if (Date.now() > sub.expires_at) {
-      await db.run(
-        "DELETE FROM subscriptions WHERE user_email = ?",
-        email
-      );
-
-      return res.status(403).json({
-        success: false,
-        reason: "EXPIRED",
-      });
-    }
-
-    // ✅ Unlimited AI allowed
-    res.json({ success: true });
-  } catch (err) {
-    console.error("❌ /use-ai failed:", err);
-    res.status(500).json({ success: false });
-  }
+app.post("/use-ai", requireActiveSubscription, async (req, res) => {
+  // 🔐 Guaranteed paid user here
+  res.json({ success: true });
 });
 
 /* =========================
