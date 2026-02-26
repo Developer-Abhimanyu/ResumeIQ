@@ -232,17 +232,20 @@ function scrollToPlans() {
    RESUME ANALYZER
 ========================= */
 
-document.getElementById("analyzeBtn").addEventListener("click", async () => {
+document.getElementById("analyzeBtn").addEventListener("click", async (e) => {
+  const btn = e.target;
+
   const email = localStorage.getItem("email");
   if (!email) {
     alert("Please login first");
     return;
   }
-btn.innerText = "Analyzing...";
-btn.disabled = true;
 
-  const resume = document.getElementById("resumeText").value;
-  const jd = document.getElementById("jdText").value;
+  btn.innerText = "Analyzing...";
+  btn.disabled = true;
+
+  const resume = document.getElementById("resumeInput").value;
+  const jd = document.getElementById("jobInput").value;
 
   if (!resume || !jd) {
     alert("Resume and Job Description required");
@@ -340,8 +343,8 @@ if (heatmapBox) {
    SIDE BY SIDE VISUAL
 ========================= */
 
-const resumeText = document.getElementById("resumeText").value;
-const jdText = document.getElementById("jdText").value;
+const resumeText = document.getElementById("resumeInput").value;
+const jdText = document.getElementById("jobInput").value;
 
 let highlightedResume = resumeText;
 let highlightedJD = jdText;
@@ -393,8 +396,8 @@ autoFixBtn.addEventListener("click", async () => {
     return;
   }
 
-  const resumeText = document.getElementById("resumeText").value;
-  const jobDescription = document.getElementById("jdText").value;
+  const resumeText = document.getElementById("resumeInput").value;
+  const jobDescription = document.getElementById("jobInput").value;
 
   if (!resumeText || !jobDescription) {
     alert("Please paste resume and job description");
@@ -418,7 +421,7 @@ autoFixBtn.addEventListener("click", async () => {
     const data = await res.json();
 
     if (data.improvedResume) {
-      document.getElementById("resumeText").value = data.improvedResume;
+      document.getElementById("resumeInput").value = data.improvedResume;
     }
 
   } catch (err) {
@@ -497,7 +500,7 @@ downloadReportBtn.addEventListener("click", async () => {
   doc.text("Resume Snapshot", 15, y);
   y += 8;
 
-  const splitResume = doc.splitTextToSize(resumeText, 180);
+  const splitResume = doc.splitTextToSize(resumeInput, 180);
   doc.setFontSize(10);
   doc.text(splitResume, 15, y);
   y += splitResume.length * 5 + 10;
@@ -515,7 +518,7 @@ downloadReportBtn.addEventListener("click", async () => {
   doc.text("Job Description Snapshot", 15, y);
   y += 8;
 
-  const splitJD = doc.splitTextToSize(jdText, 180);
+  const splitJD = doc.splitTextToSize(jobInput, 180);
   doc.setFontSize(10);
   doc.text(splitJD, 15, y);
   y += splitJD.length * 5 + 10;
