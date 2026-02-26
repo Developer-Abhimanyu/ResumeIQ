@@ -15,10 +15,6 @@ const pricingGrid = document.querySelector(".pricing-grid");
 const autoFixBtn = document.getElementById("autoFixBtn");
 const downloadReportBtn = document.getElementById("downloadReportBtn");
 
-const API_BASE = window.location.origin.includes("localhost")
-  ? "http://localhost:4242"
-  : "https://resumeiq-backend.onrender.com"; // or your live backend URL
-
 /* =====================================================
    STATE
 ===================================================== */
@@ -53,7 +49,7 @@ function unlockApp() {
    LOAD PLANS
 ===================================================== */
 async function loadPlans() {
-  const res = await fetch(`${API_BASE}/plans`);
+  const res = await fetch("http://localhost:4242/plans");
   PLANS = await res.json();
 
   pricingGrid.innerHTML = "";
