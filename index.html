@@ -13,11 +13,49 @@
 
 <body>
 
-  <h2>ATS Resume Builder</h2>
-  <p class="muted">
-    Optimize your resume for ATS and recruiters.  
-    <b>25%+ higher shortlisting rate</b> on average.
-  </p>
+<div class="bg-shapes">
+  <div class="shape shape1"></div>
+  <div class="shape shape2"></div>
+  <div class="shape shape3"></div>
+</div>
+
+<header class="navbar">
+  <div class="nav-left">
+    <span class="logo">ResumeIQ</span>
+  </div>
+
+  <div class="nav-right">
+    <button id="darkToggle" class="dark-toggle">🌙</button>
+  </div>
+</header>
+
+  <section class="hero">
+  <div class="hero-content">
+    <h1>AI-Powered ATS Resume Optimization</h1>
+    <p class="hero-sub">
+      Built for serious job seekers.  
+      Beat applicant tracking systems, match recruiter keywords,  
+      and increase your shortlisting chances by <b>25–40%</b>.
+    </p>
+
+    <div class="hero-points">
+      <span>✔ ATS Score Analysis</span>
+      <span>✔ Keyword Gap Detection</span>
+      <span>✔ AI Resume Rewriting</span>
+      <span>✔ Recruiter-Ready Export</span>
+    </div>
+  </div>
+</section>
+
+<section class="trust-strip">
+  <div class="trust-track">
+    <span>Trusted by 5,000+ Job Seekers</span>
+    <span>✔ Used for FAANG Applications</span>
+    <span>✔ ATS Optimized Templates</span>
+    <span>✔ 40% Higher Interview Rate</span>
+    <span>✔ AI-Powered Keyword Engine</span>
+  </div>
+</section>
 
   <div class="box">
     <label>Name</label>
@@ -28,6 +66,76 @@
 
     <label>Professional Summary</label>
     <textarea id="summary" placeholder="Brief summary..."></textarea>
+
+<!-- =========================
+     RESUME ANALYZER
+========================= -->
+
+<section class="analyzer-section">
+  <h2>🎯 Resume ATS Analyzer</h2>
+
+  <textarea
+    id="resumeInput"
+    placeholder="Paste your full resume here..."
+    rows="8"
+  ></textarea>
+
+  <textarea
+    id="jobInput"
+    placeholder="Paste the job description here..."
+    rows="6"
+  ></textarea>
+
+  <button id="analyzeBtn">Analyze Resume</button>
+<div id="heatmapResult" class="heatmap-box hidden"></div>
+<button id="autoFixBtn" type="button">
+  ✨ Auto Fix Resume (Pro)
+</button>
+
+<div id="analysisResults" class="box hidden">
+  <h3>ATS Analysis Results</h3>
+
+  <div class="score-container">
+  <div class="score-circle">
+    <span id="atsScore">0%</span>
+  </div>
+  <div class="score-label">ATS Score</div>
+<!-- =========================
+     SIDE BY SIDE COMPARISON
+========================= -->
+
+<div id="comparisonSection" class="comparison-section hidden">
+  <h3 style="margin-top:40px;">Resume vs Job Description</h3>
+
+  <div class="comparison-grid">
+    <div class="comparison-box">
+      <h4>Resume</h4>
+      <div id="resumePreview" class="comparison-content"></div>
+    </div>
+
+    <div class="comparison-box">
+      <h4>Job Description</h4>
+      <div id="jdPreview" class="comparison-content"></div>
+    </div>
+  </div>
+</div>
+</div>
+  <p><b>Keyword Match:</b> <span id="keywordMatch"></span></p>
+
+  <h4>Missing Keywords</h4>
+  <ul id="missingKeywords"></ul>
+
+  <h4>Improvements</h4>
+  <ul id="improvements"></ul>
+
+  <h4>Optimized Bullet Suggestions</h4>
+  <ul id="optimizedBullets"></ul>
+<button id="downloadReportBtn" class="primary-btn" style="margin-top:20px;">
+  📄 Download ATS Report (PDF)
+</button>
+</div>
+
+</section>
 
     <!-- 🔒 LOCKED BY DEFAULT -->
     <button id="rewriteBtn" type="button">
@@ -69,8 +177,38 @@
     </div>
   </div>
 
+<section class="testimonials">
+  <h2>What Job Seekers Say</h2>
+
+  <div class="testimonial-grid">
+    <div class="testimonial-card">
+      <p>
+        “My ATS score jumped from 52% to 84%. Got 3 interview calls in a week.”
+      </p>
+      <strong>— Software Engineer, Bangalore</strong>
+    </div>
+
+    <div class="testimonial-card">
+      <p>
+        “The keyword comparison is insanely helpful. Feels like insider recruiter knowledge.”
+      </p>
+      <strong>— Product Manager, Mumbai</strong>
+    </div>
+
+    <div class="testimonial-card">
+      <p>
+        “Better than generic resume builders. This actually improves content.”
+      </p>
+      <strong>— Data Analyst, Hyderabad</strong>
+    </div>
+  </div>
+</section>
+
   <div class="box">
     <h3>Upgrade & Unlock Full Power</h3>
+<p class="muted">
+  Used by professionals targeting top tech, product, and consulting roles.
+</p>
     <p class="muted">
       Recruiter-approved formats • Unlimited exports • Faster shortlisting
     </p>
@@ -92,6 +230,68 @@
     <button onclick="scrollToPlans()">View Plans</button>
   </div>
 </div>
+
+<section class="how-section">
+  <h2>How It Works</h2>
+
+  <div class="how-grid">
+    <div class="how-card">
+      <div class="step-number">1</div>
+      <h4>Paste Resume & JD</h4>
+      <p>Upload your resume and target job description.</p>
+    </div>
+
+    <div class="how-card">
+      <div class="step-number">2</div>
+      <h4>AI Analysis</h4>
+      <p>We simulate ATS scanning and keyword matching.</p>
+    </div>
+
+    <div class="how-card">
+      <div class="step-number">3</div>
+      <h4>Optimize & Export</h4>
+      <p>Auto-fix gaps and download recruiter-ready report.</p>
+    </div>
+  </div>
+</section>
+
+<section class="why-section">
+  <h2>Why ResumeIQ Works Better</h2>
+
+  <div class="why-grid">
+    <div class="why-card">
+      <h4>🎯 Real ATS Simulation</h4>
+      <p>
+        We analyze your resume the same way Applicant Tracking Systems do —
+        matching structure, keywords, and formatting signals.
+      </p>
+    </div>
+
+    <div class="why-card">
+      <h4>🧠 AI Optimization Engine</h4>
+      <p>
+        Not just scoring — we rewrite and improve bullet points
+        using measurable impact language recruiters prefer.
+      </p>
+    </div>
+
+    <div class="why-card">
+      <h4>📊 Side-by-Side Comparison</h4>
+      <p>
+        Visually compare your resume against the job description
+        and instantly identify gaps.
+      </p>
+    </div>
+
+    <div class="why-card">
+      <h4>🚀 Designed for Shortlisting</h4>
+      <p>
+        Built for modern hiring pipelines —
+        not generic resume templates.
+      </p>
+    </div>
+  </div>
+</section>
 
   <script src="app.js"></script>
 </body>
