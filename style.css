@@ -890,14 +890,9 @@ h2, h3 {
 .bg-shapes {
   position: fixed;
   inset: 0;
-  z-index: 0;          /* 🔥 changed from -1 */
+  z-index: -1;   /* 🔥 change to -1 */
   pointer-events: none;
   overflow: hidden;
-}
-
-body > *:not(.bg-shapes) {
-  position: relative;
-  z-index: 1;
 }
 
 .shape {
