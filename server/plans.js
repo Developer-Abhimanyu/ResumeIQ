@@ -1,6 +1,6 @@
 export const PLANS = {
   one_time: {
-    label: "One Time",
+    label: "1 Day",
     price: 99,
     days: 1
   },
