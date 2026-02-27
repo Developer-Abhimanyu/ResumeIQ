@@ -156,7 +156,7 @@ rewriteBtn.addEventListener("click", async () => {
     return;
   }
 
-  const res = await fetch("/use-ai", {
+  const res = await fetch("https://resumeiq-11x8.onrender.com/use-ai", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -190,7 +190,7 @@ async function startCheckout() {
     return;
   }
 
-  const res = await fetch("/create-order", {
+  const res = await fetch("https://resumeiq-11x8.onrender.com/create-order", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ planId: selectedPlanId, email })
@@ -205,7 +205,7 @@ async function startCheckout() {
     currency: order.currency,
     order_id: order.orderId,
     handler: async (response) => {
-      await fetch("/verify-payment", {
+      await fetch("https://resumeiq-11x8.onrender.com/verify-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...response, planId: selectedPlanId, email })
@@ -252,7 +252,7 @@ document.getElementById("analyzeBtn").addEventListener("click", async (e) => {
     return;
   }
 
-  const res = await fetch("/analyze-resume", {
+  const res = await fetch("https://resumeiq-11x8.onrender.com/analyze-resume", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -434,7 +434,7 @@ autoFixBtn.addEventListener("click", async () => {
   autoFixBtn.disabled = true;
 
   try {
-    const res = await fetch("/auto-fix", {
+    const res = await fetch("https://resumeiq-11x8.onrender.com/auto-fix", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

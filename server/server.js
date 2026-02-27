@@ -10,8 +10,14 @@ import PDFDocument from "pdfkit";
 
 dotenv.config();
 
+const DEV_MODE = process.env.DEV_MODE === "true";
+const isProduction = process.env.NODE_ENV === "production";
+
 const app = express();
 const PORT = process.env.PORT || 4242;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -21,7 +27,23 @@ const openai = new OpenAI({
    MIDDLEWARE
 ========================= */
 
-app.use(cors());
+const allowedOrigins = [
+  "http://localhost:5500",
+  "http://localhost:3000",
+  "https://resumeiq.online" // replace with real URL
+];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 import path from "path";
@@ -124,6 +146,9 @@ app.post("/create-order", async (req, res) => {
 ========================= */
 
 app.post("/verify-payment", async (req, res) => {
+if (DEV_MODE) {
+  return res.json({ success: true, message: "Payment bypassed (dev mode)" });
+}
   const {
     razorpay_order_id,
     razorpay_payment_id,
