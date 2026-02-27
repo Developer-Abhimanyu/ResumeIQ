@@ -205,15 +205,30 @@ async function startCheckout() {
     currency: order.currency,
     order_id: order.orderId,
     handler: async (response) => {
-      await fetch("https://resumeiq-11x8.onrender.com/verify-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...response, planId: selectedPlanId, email })
-      });
 
-      alert("✅ Payment successful");
-      await checkPaywall();
-    }
+  const verifyRes = await fetch("https://resumeiq-11x8.onrender.com/verify-payment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      razorpay_order_id: response.razorpay_order_id,
+      razorpay_payment_id: response.razorpay_payment_id,
+      razorpay_signature: response.razorpay_signature,
+      planId: selectedPlanId,
+      email
+    })
+  });
+
+  const verifyData = await verifyRes.json();
+
+  if (!verifyRes.ok || !verifyData.success) {
+    alert("Payment verification failed");
+    return;
+  }
+
+  alert("✅ Payment successful");
+
+  await checkPaywall();
+}
   });
 
   rzp.open();
@@ -263,9 +278,21 @@ document.getElementById("analyzeBtn").addEventListener("click", async (e) => {
   });
 
   if (!res.ok) {
-    alert("Subscription required");
-    return;
+  const error = await res.json();
+  console.log(error);
+
+  if (error.reason === "NO_SUBSCRIPTION") {
+    alert("No active subscription found");
+  } else if (error.reason === "EXPIRED") {
+    alert("Subscription expired");
+  } else {
+    alert("Access denied");
   }
+
+  btn.innerText = "Analyze Resume";
+  btn.disabled = false;
+  return;
+}
 
   const data = await res.json();
 btn.innerText = "Analyze Resume";
