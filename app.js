@@ -141,7 +141,7 @@ function updatePlanUI(me) {
   });
 
   if (!me?.active) {
-    planEl.innerText = "LOCKED";
+    planEl.innerText = "Locked";
     expiryEl.innerText = "—";
     aiLeftEl.innerText = "0";
     updateCountdown(0, 1);

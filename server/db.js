@@ -2,7 +2,7 @@ import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import path from "path";
 
-const dbPath = path.resolve("resumeiq6.db");
+const dbPath = path.resolve("resumeiq.db");
 
 const db = await open({
   filename: dbPath,
