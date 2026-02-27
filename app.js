@@ -126,7 +126,9 @@ async function checkPaywall() {
   if (me.active) unlockApp();
   else lockApp();
 
+  setTimeout(() => {
   updatePlanUI(me);
+}, 100);
 }
 
 /* =====================================================
@@ -134,6 +136,16 @@ async function checkPaywall() {
 ===================================================== */
 
 function updatePlanUI(me) {
+
+  const planEl = document.getElementById("plan");
+  const expiryEl = document.getElementById("expiry");
+  const aiLeftEl = document.getElementById("aiLeft");
+
+  if (!planEl || !expiryEl || !aiLeftEl) {
+    console.warn("Plan UI elements missing");
+    return;
+  }
+
   document.querySelectorAll(".pricing-card").forEach(card => {
     card.classList.remove("active-plan");
     const badge = card.querySelector(".active-badge");
@@ -158,18 +170,21 @@ function updatePlanUI(me) {
   expiryEl.innerText = expiresAt.toLocaleDateString();
   aiLeftEl.innerText = "Unlimited";
 
-  const activeCard = document.querySelector(
-    `.pricing-card[data-plan-id="${me.plan.id}"]`
-  );
+  // 🔥 IMPORTANT FIX — wait until plans loaded
+  setTimeout(() => {
+    const activeCard = document.querySelector(
+      `.pricing-card[data-plan-id="${me.plan.id}"]`
+    );
 
-  if (activeCard) {
-    activeCard.classList.add("active-plan");
+    if (activeCard) {
+      activeCard.classList.add("active-plan");
 
-    const badge = document.createElement("div");
-    badge.className = "active-badge";
-    badge.innerText = "ACTIVE";
-    activeCard.appendChild(badge);
-  }
+      const badge = document.createElement("div");
+      badge.className = "active-badge";
+      badge.innerText = "ACTIVE";
+      activeCard.appendChild(badge);
+    }
+  }, 100);
 
   updateCountdown(totalDays, getPlanDuration(me.plan.id));
 
@@ -185,10 +200,14 @@ function updateCountdown(daysLeft, totalDays) {
   const circle = document.getElementById("progressCircle");
   const number = document.getElementById("daysLeftNumber");
 
+  if (!circle || !number) return;
+
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
 
-  const percent = daysLeft / totalDays;
+  circle.style.strokeDasharray = circumference;
+
+  const percent = totalDays > 0 ? daysLeft / totalDays : 0;
   const offset = circumference - percent * circumference;
 
   circle.style.strokeDashoffset = offset;
