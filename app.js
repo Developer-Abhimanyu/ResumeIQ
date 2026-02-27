@@ -49,7 +49,7 @@ function unlockApp() {
    LOAD PLANS
 ===================================================== */
 async function loadPlans() {
-  const res = await fetch("/plans");
+  const res = await fetch("https://resumeiq-11x8.onrender.com/plans");
   PLANS = await res.json();
 
   pricingGrid.innerHTML = "";
@@ -119,7 +119,7 @@ async function checkPaywall() {
     return;
   }
 
-  const res = await fetch(`/me?email=${email}`);
+  const res = await fetch(`https://resumeiq-11x8.onrender.com/me?email=${email}`);
   const me = await res.json();
   window.serverMe = me;
 
