@@ -268,8 +268,14 @@ if (window.serverMe?.active) {
     body: JSON.stringify({ planId: selectedPlanId, email })
   });
 
-  const order = await res.json();
-  console.log("Order response:", order);
+  if (!res.ok) {
+  const error = await res.json();
+  showToast(error.message || "Unable to create order");
+  return;
+}
+
+const order = await res.json();
+console.log("Order response:", order);
 
   const rzp = new Razorpay({
     key: order.key,

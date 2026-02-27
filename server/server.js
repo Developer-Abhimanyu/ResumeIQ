@@ -115,38 +115,58 @@ app.post("/register", async (req, res) => {
 ========================= */
 
 app.post("/create-order", async (req, res) => {
-  const { planId } = req.body;
-const user = await db.getUserByEmail(email);
-if (user && user.plan && user.plan.expiresAt) {
-    const now = new Date();
-    const expiresAt = new Date(user.plan.expiresAt);
+  try {
+    const { planId, email } = req.body;
 
-    if (expiresAt > now) {
+    // ✅ Validate input
+    if (!planId || !email) {
       return res.status(400).json({
-        error: "PLAN_ACTIVE",
-        message: "You already have an active subscription."
+        error: "MISSING_FIELDS",
+        message: "Plan ID and email are required"
       });
     }
+
+    const plan = PLANS[planId];
+
+    if (!plan) {
+      return res.status(400).json({
+        error: "INVALID_PLAN"
+      });
+    }
+
+    // ✅ Check if user already has active subscription
+    const existingSub = await db.get(
+      "SELECT expires_at FROM subscriptions WHERE user_email = ?",
+      email
+    );
+
+    if (existingSub && Date.now() < existingSub.expires_at) {
+      return res.status(400).json({
+        error: "PLAN_ACTIVE",
+        message: "You already have an active subscription"
+      });
+    }
+
+    // ✅ Create Razorpay order
+    const order = await razorpay.orders.create({
+      amount: plan.price * 100,
+      currency: "INR",
+      receipt: `receipt_${planId}_${Date.now()}`
+    });
+
+    return res.json({
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      key: process.env.RAZORPAY_KEY_ID
+    });
+
+  } catch (error) {
+    console.error("Create order error:", error);
+    return res.status(500).json({
+      error: "SERVER_ERROR"
+    });
   }
-  const plan = PLANS[planId];
-
-  if (!plan) {
-    return res.status(400).json({ error: "Invalid plan" });
-  }
-
-  const order = await razorpay.orders.create({
-    amount: plan.price * 100,
-    currency: "INR",
-    receipt: `receipt_${planId}_${Date.now()}`,
-  });
-
-  res.json({
-    orderId: order.id,
-    amount: order.amount,
-    currency: order.currency,
-    plan,
-    key: process.env.RAZORPAY_KEY_ID,
-  });
 });
 
 /* =========================
