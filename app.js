@@ -134,40 +134,82 @@ async function checkPaywall() {
 ===================================================== */
 
 function updatePlanUI(me) {
+  document.querySelectorAll(".pricing-card").forEach(card => {
+    card.classList.remove("active-plan");
+    const badge = card.querySelector(".active-badge");
+    if (badge) badge.remove();
+  });
+
   if (!me?.active) {
     planEl.innerText = "LOCKED";
     expiryEl.innerText = "—";
     aiLeftEl.innerText = "0";
+    updateCountdown(0, 1);
     return;
   }
+
+  const expiresAt = new Date(me.plan.expiresAt);
+  const now = new Date();
+
+  const totalMs = expiresAt - now;
+  const totalDays = Math.ceil(totalMs / (1000 * 60 * 60 * 24));
 
   planEl.innerText = me.plan.name;
-  expiryEl.innerText = new Date(me.plan.expiresAt).toLocaleDateString();
+  expiryEl.innerText = expiresAt.toLocaleDateString();
   aiLeftEl.innerText = "Unlimited";
-}
 
-/* =====================================================
-   AI BUTTON
-===================================================== */
+  const activeCard = document.querySelector(
+    `.pricing-card[data-plan-id="${me.plan.id}"]`
+  );
 
-rewriteBtn.addEventListener("click", async () => {
-  if (!window.serverMe?.active) {
-    showUpgradeModal();
-    return;
+  if (activeCard) {
+    activeCard.classList.add("active-plan");
+
+    const badge = document.createElement("div");
+    badge.className = "active-badge";
+    badge.innerText = "ACTIVE";
+    activeCard.appendChild(badge);
   }
 
-  const res = await fetch("https://resumeiq-11x8.onrender.com/use-ai", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: localStorage.getItem("email"),
-      text: summary.value
-    })
-  });
+  updateCountdown(totalDays, getPlanDuration(me.plan.id));
 
-  const data = await res.json();
-  summary.value = data.result;
-});
+  startAutoExpireTimer(expiresAt);
+}
+
+function getPlanDuration(planId) {
+  if (!PLANS[planId]) return 1;
+  return PLANS[planId].days;
+}
+
+function updateCountdown(daysLeft, totalDays) {
+  const circle = document.getElementById("progressCircle");
+  const number = document.getElementById("daysLeftNumber");
+
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+
+  const percent = daysLeft / totalDays;
+  const offset = circumference - percent * circumference;
+
+  circle.style.strokeDashoffset = offset;
+
+  number.innerText = daysLeft > 0 ? daysLeft : 0;
+}
+
+function startAutoExpireTimer(expiresAt) {
+  const interval = setInterval(async () => {
+    const now = new Date();
+
+    if (now >= expiresAt) {
+      clearInterval(interval);
+
+      showToast("⚠️ Plan Expired");
+
+      await checkPaywall(); // auto lock UI
+      showUpgradeModal();
+    }
+  }, 60000); // checks every 1 minute
+}
 
 /* =====================================================
    CHECKOUT
@@ -204,31 +246,26 @@ async function startCheckout() {
     amount: order.amount,
     currency: order.currency,
     order_id: order.orderId,
-    handler: async (response) => {
 
-  const verifyRes = await fetch("https://resumeiq-11x8.onrender.com/verify-payment", {
+handler: async (response) => {
+  await fetch("https://resumeiq-11x8.onrender.com/verify-payment", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      razorpay_order_id: response.razorpay_order_id,
-      razorpay_payment_id: response.razorpay_payment_id,
-      razorpay_signature: response.razorpay_signature,
-      planId: selectedPlanId,
-      email
-    })
+    body: JSON.stringify({ ...response, planId: selectedPlanId, email })
   });
 
-  const verifyData = await verifyRes.json();
-
-  if (!verifyRes.ok || !verifyData.success) {
-    alert("Payment verification failed");
-    return;
-  }
-
-  alert("✅ Payment successful");
+  showToast("🎉 Plan Activated Successfully!");
 
   await checkPaywall();
+
+  // Auto close modal
+  closeUpgradeModal();
+
+  // Scroll to dashboard
+  document.getElementById("analysisResults")
+    ?.scrollIntoView({ behavior: "smooth" });
 }
+
   });
 
   rzp.open();
@@ -714,4 +751,21 @@ function submitLogin() {
 
   // 🔥 Immediately continue checkout
   startCheckout();
+}
+
+function showToast(message) {
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.innerText = message;
+
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("show");
+  }, 100);
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }

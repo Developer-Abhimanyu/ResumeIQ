@@ -171,6 +171,7 @@
     <h3>Your Plan</h3>
     <p><b>Plan:</b> <span id="plan"></span></p>
     <p><b>Expiry:</b> <span id="expiry"></span></p>
+<p id="daysLeft" class="days-left"></p>
     <p><b>AI Credits Left:</b> <span id="aiLeft"></span></p>
 
     <div class="usage-box">
@@ -188,6 +189,37 @@
       </div>
     </div>
   </div>
+
+<div class="countdown-wrapper">
+  <div class="countdown-circle">
+    <svg width="120" height="120">
+      <circle
+        cx="60"
+        cy="60"
+        r="54"
+        stroke="#e5e7eb"
+        stroke-width="10"
+        fill="none"
+      />
+      <circle
+        id="progressCircle"
+        cx="60"
+        cy="60"
+        r="54"
+        stroke="#10b981"
+        stroke-width="10"
+        fill="none"
+        stroke-linecap="round"
+        stroke-dasharray="339.292"
+        stroke-dashoffset="339.292"
+      />
+    </svg>
+    <div class="countdown-text">
+      <span id="daysLeftNumber">0</span>
+      <small>Days</small>
+    </div>
+  </div>
+</div>
 
 <section class="testimonials">
   <h2>What Job Seekers Say</h2>

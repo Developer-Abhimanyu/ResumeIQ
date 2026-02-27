@@ -1157,3 +1157,99 @@ h2, h3 {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   transition: width 0.6s ease;
 }
+
+.active-plan {
+  border: 2px solid #10b981;
+  transform: scale(1.03);
+}
+
+.active-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: #10b981;
+  color: white;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+  box-shadow: 0 5px 15px rgba(16,185,129,0.3);
+}
+
+.toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: #111;
+  color: white;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: 0.3s ease;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  z-index: 9999;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.days-left {
+  font-weight: 600;
+  color: #10b981;
+  margin-top: 4px;
+}
+
+.countdown-wrapper {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+}
+
+.countdown-circle {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.countdown-circle svg {
+  transform: rotate(-90deg);
+}
+
+.countdown-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  font-weight: 600;
+}
+
+.countdown-text span {
+  font-size: 22px;
+  display: block;
+}
+
+.countdown-text small {
+  font-size: 12px;
+  color: #666;
+}
+
+.active-plan {
+  border: 2px solid #10b981;
+  position: relative;
+}
+
+.active-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #10b981;
+  color: white;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}

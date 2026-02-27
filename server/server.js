@@ -14,9 +14,6 @@ const isProduction = process.env.NODE_ENV === "production";
 
 const app = express();
 const PORT = process.env.PORT || 4242;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
