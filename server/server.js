@@ -10,7 +10,6 @@ import PDFDocument from "pdfkit";
 
 dotenv.config();
 
-const DEV_MODE = process.env.DEV_MODE === "true";
 const isProduction = process.env.NODE_ENV === "production";
 
 const app = express();
@@ -146,9 +145,7 @@ app.post("/create-order", async (req, res) => {
 ========================= */
 
 app.post("/verify-payment", async (req, res) => {
-if (DEV_MODE) {
-  return res.json({ success: true, message: "Payment bypassed (dev mode)" });
-}
+
   const {
     razorpay_order_id,
     razorpay_payment_id,
