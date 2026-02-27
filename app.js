@@ -67,13 +67,6 @@ async function loadPlans() {
       <button class="choose-btn">Choose Plan</button>
     `;
 
-if (window.serverMe?.active) {
-  const btn = card.querySelector(".choose-btn");
-  btn.innerText = "Active Plan";
-  btn.disabled = true;
-  card.classList.add("disabled-plan");
-}
-
     // 👇 ONLY select when clicking card (not checkout)
     card.addEventListener("click", (e) => {
       if (e.target.classList.contains("choose-btn")) return;
@@ -151,16 +144,44 @@ function updatePlanUI(me) {
     return;
   }
 
-  document.querySelectorAll(".pricing-card").forEach(card => {
-    card.classList.remove("active-plan");
-    const badge = card.querySelector(".active-badge");
-    if (badge) badge.remove();
-  });
+
+// Reset all cards
+document.querySelectorAll(".pricing-card").forEach(card => {
+  card.classList.remove("active-plan", "disabled-plan");
+
+  const btn = card.querySelector(".choose-btn");
+  btn.disabled = false;
+  btn.innerText = "Choose Plan";
+
+  const badge = card.querySelector(".active-badge");
+  if (badge) badge.remove();
+});
 
   if (!me?.active) {
     planEl.innerText = "Locked";
     expiryEl.innerText = "—";
     updateCountdown(0, 1);
+
+// Highlight active plan + disable others
+document.querySelectorAll(".pricing-card").forEach(card => {
+  const btn = card.querySelector(".choose-btn");
+
+  if (card.dataset.planId === me.plan.id) {
+    card.classList.add("active-plan");
+
+    const badge = document.createElement("div");
+    badge.className = "active-badge";
+    badge.innerText = "ACTIVE";
+    card.appendChild(badge);
+
+    btn.innerText = "Current Plan";
+    btn.disabled = true;
+  } else {
+    card.classList.add("disabled-plan");
+    btn.innerText = "Unavailable";
+    btn.disabled = true;
+  }
+});
     return;
   }
 
