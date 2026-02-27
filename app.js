@@ -67,6 +67,13 @@ async function loadPlans() {
       <button class="choose-btn">Choose Plan</button>
     `;
 
+if (window.serverMe?.active) {
+  const btn = card.querySelector(".choose-btn");
+  btn.innerText = "Active Plan";
+  btn.disabled = true;
+  card.classList.add("disabled-plan");
+}
+
     // 👇 ONLY select when clicking card (not checkout)
     card.addEventListener("click", (e) => {
       if (e.target.classList.contains("choose-btn")) return;
@@ -231,6 +238,10 @@ function startAutoExpireTimer(expiresAt) {
 ===================================================== */
 
 async function startCheckout() {
+if (window.serverMe?.active) {
+  showToast("You already have an active plan");
+  return;
+}
   console.log("START CHECKOUT CALLED");
   console.log("Selected Plan:", selectedPlanId);
 

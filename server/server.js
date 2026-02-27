@@ -116,6 +116,18 @@ app.post("/register", async (req, res) => {
 
 app.post("/create-order", async (req, res) => {
   const { planId } = req.body;
+const user = await db.getUserByEmail(email);
+if (user && user.plan && user.plan.expiresAt) {
+    const now = new Date();
+    const expiresAt = new Date(user.plan.expiresAt);
+
+    if (expiresAt > now) {
+      return res.status(400).json({
+        error: "PLAN_ACTIVE",
+        message: "You already have an active subscription."
+      });
+    }
+  }
   const plan = PLANS[planId];
 
   if (!plan) {
