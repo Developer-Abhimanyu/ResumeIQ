@@ -24,6 +24,15 @@ const openai = new OpenAI({
 app.use(cors());
 app.use(express.json());
 
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Serve frontend from "public" folder
+app.use(express.static(path.join(__dirname, "public")));
+
 app.get("/plans", (req, res) => {
   res.json(PLANS);
 });
@@ -62,10 +71,6 @@ async function requireActiveSubscription(req, res, next) {
 /* =========================
    GET PLANS (SOURCE OF TRUTH)
 ========================= */
-
-app.get("/plans", (req, res) => {
-  res.json(PLANS);
-});
 
 /* =========================
    REGISTER USER

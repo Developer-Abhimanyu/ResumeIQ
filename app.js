@@ -49,7 +49,7 @@ function unlockApp() {
    LOAD PLANS
 ===================================================== */
 async function loadPlans() {
-  const res = await fetch("http://localhost:4242/plans");
+  const res = await fetch("/plans");
   PLANS = await res.json();
 
   pricingGrid.innerHTML = "";
@@ -119,7 +119,7 @@ async function checkPaywall() {
     return;
   }
 
-  const res = await fetch(`http://localhost:4242/me?email=${email}`);
+  const res = await fetch(`/me?email=${email}`);
   const me = await res.json();
   window.serverMe = me;
 
@@ -156,7 +156,7 @@ rewriteBtn.addEventListener("click", async () => {
     return;
   }
 
-  const res = await fetch("http://localhost:4242/use-ai", {
+  const res = await fetch("/use-ai", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -181,7 +181,7 @@ async function startCheckout() {
   console.log("Email:", email);
 
   if (!email) {
-    alert("No email found in localStorage");
+    showLoginModal();
     return;
   }
 
@@ -190,7 +190,7 @@ async function startCheckout() {
     return;
   }
 
-  const res = await fetch("http://localhost:4242/create-order", {
+  const res = await fetch("/create-order", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ planId: selectedPlanId, email })
@@ -205,7 +205,7 @@ async function startCheckout() {
     currency: order.currency,
     order_id: order.orderId,
     handler: async (response) => {
-      await fetch("http://localhost:4242/verify-payment", {
+      await fetch("/verify-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...response, planId: selectedPlanId, email })
@@ -252,7 +252,7 @@ document.getElementById("analyzeBtn").addEventListener("click", async (e) => {
     return;
   }
 
-  const res = await fetch("http://localhost:4242/analyze-resume", {
+  const res = await fetch("/analyze-resume", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -276,8 +276,34 @@ btn.disabled = false;
 function renderAnalysis(data) {
   const score = data.atsScore;
 
+let status = "Needs Improvement";
+let statusColor = "#ef4444";
+
+if (score > 60) {
+  status = "Strong";
+  statusColor = "#f59e0b";
+}
+
+if (score > 80) {
+  status = "Excellent";
+  statusColor = "#10b981";
+}
+
+document.getElementById("scoreStatus").innerText = status;
+document.getElementById("scoreStatus").style.color = statusColor;
+
 document.getElementById("atsScore").innerText = score + "%";
 animateScore(atsScore);
+
+const totalKeywords = 
+  (data.matchedKeywords?.length || 0) + 
+  (data.missingKeywords?.length || 0);
+
+const matchPercent = totalKeywords
+  ? Math.floor((data.matchedKeywords.length / totalKeywords) * 100)
+  : 0;
+
+document.getElementById("keywordMatchBar").style.width = matchPercent + "%";
 
 const circle = document.querySelector(".score-circle");
 
@@ -408,7 +434,7 @@ autoFixBtn.addEventListener("click", async () => {
   autoFixBtn.disabled = true;
 
   try {
-    const res = await fetch("http://localhost:4242/auto-fix", {
+    const res = await fetch("/auto-fix", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -422,6 +448,8 @@ autoFixBtn.addEventListener("click", async () => {
 
     if (data.improvedResume) {
       document.getElementById("resumeInput").value = data.improvedResume;
+document.getElementById("fixedPreview").innerText = data.improvedResume;
+  document.getElementById("fixSection").classList.remove("hidden");
     }
 
   } catch (err) {
@@ -481,6 +509,9 @@ downloadReportBtn.addEventListener("click", async () => {
   /* =========================
      SCORE SECTION
   ========================= */
+
+doc.setFillColor(240, 249, 255);
+doc.roundedRect(15, y - 5, 180, 25, 5, 5, "F");
 
   doc.setFontSize(14);
   doc.text("ATS Summary", 15, y);
@@ -631,3 +662,29 @@ function calculateLiveScore() {
 
 resumeInput.addEventListener("input", calculateLiveScore);
 jobInput.addEventListener("input", calculateLiveScore);
+
+const loginModal = document.getElementById("loginModal");
+
+function showLoginModal() {
+  loginModal.classList.remove("hidden");
+}
+
+function closeLoginModal() {
+  loginModal.classList.add("hidden");
+}
+
+function submitLogin() {
+  const email = document.getElementById("loginEmail").value.trim();
+
+  if (!email || !email.includes("@")) {
+    alert("Enter valid email");
+    return;
+  }
+
+  localStorage.setItem("email", email);
+
+  closeLoginModal();
+
+  // 🔥 Immediately continue checkout
+  startCheckout();
+}
