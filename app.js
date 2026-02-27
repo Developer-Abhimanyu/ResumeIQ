@@ -4,7 +4,6 @@
 
 const planEl = document.getElementById("plan");
 const expiryEl = document.getElementById("expiry");
-const aiLeftEl = document.getElementById("aiLeft");
 
 const rewriteBtn = document.getElementById("rewriteBtn");
 const summary = document.getElementById("summary");
@@ -139,9 +138,8 @@ function updatePlanUI(me) {
 
   const planEl = document.getElementById("plan");
   const expiryEl = document.getElementById("expiry");
-  const aiLeftEl = document.getElementById("aiLeft");
 
-  if (!planEl || !expiryEl || !aiLeftEl) {
+  if (!planEl || !expiryEl) {
     console.warn("Plan UI elements missing");
     return;
   }
@@ -155,7 +153,6 @@ function updatePlanUI(me) {
   if (!me?.active) {
     planEl.innerText = "Locked";
     expiryEl.innerText = "—";
-    aiLeftEl.innerText = "0";
     updateCountdown(0, 1);
     return;
   }
@@ -168,7 +165,6 @@ function updatePlanUI(me) {
 
   planEl.innerText = me.plan.name;
   expiryEl.innerText = expiresAt.toLocaleDateString();
-  aiLeftEl.innerText = "Unlimited";
 
   // 🔥 IMPORTANT FIX — wait until plans loaded
   setTimeout(() => {
@@ -376,7 +372,7 @@ document.getElementById("scoreStatus").innerText = status;
 document.getElementById("scoreStatus").style.color = statusColor;
 
 document.getElementById("atsScore").innerText = score + "%";
-animateScore(atsScore);
+animateScore(score);
 
 const totalKeywords = 
   (data.matchedKeywords?.length || 0) + 
