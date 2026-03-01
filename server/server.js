@@ -209,13 +209,14 @@ app.post("/verify-payment", authenticateToken, async (req, res) => {
     razorpay_order_id,
     razorpay_payment_id,
     razorpay_signature,
-    planId,
-    email,
+    planId
   } = req.body;
 
+  const email = req.user.email; // ✅ TAKE FROM JWT
+
   const plan = PLANS[planId];
-  if (!email || !plan) {
-    return res.status(400).json({ error: "Invalid request" });
+  if (!plan) {
+    return res.status(400).json({ error: "Invalid plan" });
   }
 
   const body = `${razorpay_order_id}|${razorpay_payment_id}`;
@@ -228,6 +229,7 @@ app.post("/verify-payment", authenticateToken, async (req, res) => {
     return res.status(400).json({ error: "Invalid signature" });
   }
 
+  // Save payment
   await db.run(
     `INSERT INTO payments
      (razorpay_order_id, razorpay_payment_id, razorpay_signature, plan_id, amount, status)
@@ -242,11 +244,17 @@ app.post("/verify-payment", authenticateToken, async (req, res) => {
     ]
   );
 
-  await db.run("DELETE FROM subscriptions WHERE user_email = ?", email);
+  // Remove old subscription
+  await db.run(
+    "DELETE FROM subscriptions WHERE user_email = ?",
+    email
+  );
 
+  // Calculate expiry
   const expiresAt =
     Date.now() + plan.days * 24 * 60 * 60 * 1000;
 
+  // Insert new subscription
   await db.run(
     `INSERT INTO subscriptions
      (user_email, plan_id, plan_name, expires_at)
@@ -254,7 +262,7 @@ app.post("/verify-payment", authenticateToken, async (req, res) => {
     [email, planId, plan.label, expiresAt]
   );
 
-  res.json({ success: true });
+  return res.json({ success: true });
 });
 
 /* =========================
