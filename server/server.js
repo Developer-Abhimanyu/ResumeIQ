@@ -271,14 +271,18 @@ app.get("/me", authenticateToken, async (req, res) => {
   );
 
   if (!sub || Date.now() > sub.expires_at) {
-    if (sub) {
-      await db.run(
-        "DELETE FROM subscriptions WHERE user_email = ?",
-        email
-      );
-    }
-    return res.json({ active: false });
+  if (sub) {
+    await db.run(
+      "DELETE FROM subscriptions WHERE user_email = ?",
+      email
+    );
   }
+
+  return res.json({
+    email: req.user.email,
+    active: false
+  });
+}
 
   res.json({
 email: req.user.email,
