@@ -164,7 +164,7 @@ async function checkPaywall() {
 
 // ✅ Show user in navbar
 if (navUser) {
-  navUser.innerText = me.email;
+  navUser.innerText = me?.email || "User";
   navUser.classList.remove("hidden");
 }
 
@@ -828,25 +828,51 @@ function closeLoginModal() {
 
 
 async function submitLogin() {
-  const email = document.getElementById("loginEmail").value.trim();
+  const emailInput = document.getElementById("loginEmail");
+  const btn = document.getElementById("loginBtn");
+  const btnText = document.getElementById("loginBtnText");
 
-  if (!email || !email.includes("@")) {
-    alert("Enter valid email");
+  const email = emailInput.value.trim();
+
+  if (!email) {
+    alert("Please enter your email");
     return;
   }
 
-  const res = await fetch("https://resumeiq-11x8.onrender.com/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email })
-  });
+  // 🔹 Start loader
+  btn.classList.add("loading");
+  btnText.innerText = "Signing in...";
 
-  const data = await res.json();
+  try {
+    const res = await fetch("https://resumeiq-11x8.onrender.com/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email })
+    });
 
-  localStorage.setItem("token", data.token);
+    const data = await res.json();
 
-  closeLoginModal();
-  await checkPaywall();
+    // 🔥 CRITICAL FIX
+    if (!data.token) {
+      throw new Error("Login failed");
+    }
+
+    // Save token
+    localStorage.setItem("token", data.token);
+
+    // Fetch user info
+    await checkPaywall();
+
+    closeLoginModal();
+
+  } catch (err) {
+    alert("Login failed. Try again.");
+    console.error(err);
+  } finally {
+    // 🔹 Stop loader
+    btn.classList.remove("loading");
+    btnText.innerText = "Continue with Email";
+  }
 }
 
 function showToast(message) {
