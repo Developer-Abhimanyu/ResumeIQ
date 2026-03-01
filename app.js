@@ -163,12 +163,13 @@ async function checkPaywall() {
     window.serverMe = me;
 
 // ✅ Show user in navbar
-if (navUser) {
-  navUser.innerText = me?.email || "User";
+// ✅ Show user in navbar ONLY if email exists
+if (navUser && me && me.email) {
+  navUser.innerText = me.email;
   navUser.classList.remove("hidden");
 }
 
-if (logoutBtn) {
+if (logoutBtn && me && me.email) {
   logoutBtn.classList.remove("hidden");
 }
 
