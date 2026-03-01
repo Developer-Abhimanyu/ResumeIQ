@@ -1284,3 +1284,15 @@ h2, h3 {
   background: none !important;
   box-shadow: none !important;
 }
+
+/* ===== Fix Login Input Alignment ===== */
+
+.login-form {
+  text-align: left;
+}
+
+.login-form input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
