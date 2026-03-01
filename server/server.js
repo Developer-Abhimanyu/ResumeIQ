@@ -7,8 +7,10 @@ import db from "./db.js";
 import OpenAI from "openai";
 import { PLANS } from "./plans.js";
 import PDFDocument from "pdfkit";
+import jwt from "jsonwebtoken";
 
 dotenv.config();
+const JWT_SECRET = process.env.JWT_SECRET || "resumeiq_super_secret";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -59,12 +61,26 @@ app.get("/plans", (req, res) => {
    PAID USER GUARD
 ========================= */
 
-async function requireActiveSubscription(req, res, next) {
-  const email = req.body.email || req.query.email;
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
 
-  if (!email) {
-    return res.status(400).json({ error: "Email required" });
+  if (!token) {
+    return res.status(401).json({ error: "No token provided" });
   }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: "Invalid token" });
+    }
+
+    req.user = user; // contains email
+    next();
+  });
+}
+
+async function requireActiveSubscription(req, res, next) {
+  const email = req.user.email;
 
   const sub = await db.get(
     `SELECT expires_at FROM subscriptions WHERE user_email = ?`,
@@ -94,29 +110,43 @@ async function requireActiveSubscription(req, res, next) {
    REGISTER USER
 ========================= */
 
-app.post("/register", async (req, res) => {
+app.post("/login", async (req, res) => {
   const { email } = req.body;
-  if (!email) return res.status(400).json({ error: "Email required" });
 
-  const existing = await db.get(
-    "SELECT email FROM users WHERE email = ?",
+  if (!email) {
+    return res.status(400).json({ error: "Email required" });
+  }
+
+  let user = await db.get(
+    "SELECT * FROM users WHERE email = ?",
     email
   );
 
-  if (!existing) {
+  if (!user) {
     await db.run("INSERT INTO users (email) VALUES (?)", email);
+    user = await db.get(
+      "SELECT * FROM users WHERE email = ?",
+      email
+    );
   }
 
-  res.json({ success: true });
+  const token = jwt.sign(
+    { email: user.email },
+    JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  res.json({ token });
 });
 
 /* =========================
    CREATE RAZORPAY ORDER
 ========================= */
 
-app.post("/create-order", async (req, res) => {
+app.post("/create-order", authenticateToken, async (req, res) => {
   try {
-    const { planId, email } = req.body;
+    const { planId } = req.body;
+const email = req.user.email;
 
     // ✅ Validate input
     if (!planId || !email) {
@@ -173,7 +203,7 @@ app.post("/create-order", async (req, res) => {
    VERIFY PAYMENT
 ========================= */
 
-app.post("/verify-payment", async (req, res) => {
+app.post("/verify-payment", authenticateToken, async (req, res) => {
 
   const {
     razorpay_order_id,
@@ -231,9 +261,8 @@ app.post("/verify-payment", async (req, res) => {
    ME
 ========================= */
 
-app.get("/me", async (req, res) => {
-  const { email } = req.query;
-  if (!email) return res.status(400).json({ error: "Email required" });
+app.get("/me", authenticateToken, async (req, res) => {
+  const email = req.user.email;
 
   const sub = await db.get(
     `SELECT plan_id, plan_name, expires_at
@@ -248,11 +277,11 @@ app.get("/me", async (req, res) => {
         email
       );
     }
-    return res.json({ email, active: false });
+    return res.json({ active: false });
   }
 
   res.json({
-    email,
+email: req.user.email,
     active: true,
     plan: {
       id: sub.plan_id,
@@ -266,7 +295,7 @@ app.get("/me", async (req, res) => {
    USE AI (REAL, PAID ONLY)
 ========================= */
 
-app.post("/use-ai", requireActiveSubscription, async (req, res) => {
+app.post("/use-ai", authenticateToken, requireActiveSubscription, async (req, res) => {
   const { text } = req.body;
 
   if (!text) {
@@ -301,7 +330,7 @@ app.post("/use-ai", requireActiveSubscription, async (req, res) => {
    ANALYZE RESUME (ADVANCED)
 ========================= */
 
-app.post("/analyze-resume", requireActiveSubscription, async (req, res) => {
+app.post("/analyze-resume", authenticateToken, requireActiveSubscription, async (req, res) => {
   const { resume, jobDescription } = req.body;
 
   if (!resume || !jobDescription) {
@@ -377,7 +406,7 @@ ${jobDescription}
    AUTO FIX RESUME (PRO ONLY)
 ========================= */
 
-app.post("/auto-fix", requireActiveSubscription, async (req, res) => {
+app.post("/auto-fix", authenticateToken, requireActiveSubscription, async (req, res) => {
   const { resumeText, jobDescription } = req.body;
 
   if (!resumeText || !jobDescription) {
@@ -424,7 +453,7 @@ Return only the improved resume.
    EXPORT ATS REPORT (PDF)
 ========================= */
 
-app.post("/export-report", requireActiveSubscription, async (req, res) => {
+app.post("/export-report", authenticateToken, requireActiveSubscription, async (req, res) => {
   const {
     atsScore,
     keywordMatch,

@@ -1271,3 +1271,22 @@ h2, h3 {
   padding: 4px 8px;
   border-radius: 20px;
 }
+
+.nav-user {
+  font-weight: 600;
+  font-size: 14px;
+  color: #111827;
+}
+
+.logout-btn {
+  background: #ef4444;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  width: auto;
+}
+
+.logout-btn:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+}

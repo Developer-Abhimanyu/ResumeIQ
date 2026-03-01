@@ -14,6 +14,9 @@ const pricingGrid = document.querySelector(".pricing-grid");
 const autoFixBtn = document.getElementById("autoFixBtn");
 const downloadReportBtn = document.getElementById("downloadReportBtn");
 
+const navUser = document.getElementById("navUser");
+const logoutBtn = document.getElementById("logoutBtn");
+
 /* =====================================================
    STATE
 ===================================================== */
@@ -25,6 +28,15 @@ window.serverMe = null;
 /* =====================================================
    PAYWALL
 ===================================================== */
+
+function getAuthHeaders() {
+  const token = localStorage.getItem("token");
+
+  return {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token
+  };
+}
 
 function showUpgradeModal() {
   upgradeModal.classList.remove("hidden");
@@ -109,27 +121,73 @@ function selectPlan(planId) {
 /* =====================================================
    PAYWALL CHECK
 ===================================================== */
-
 async function checkPaywall() {
-  const email = localStorage.getItem("email");
-  if (!email) {
-    lockApp();
-    updatePlanUI(null);
-    return;
-  }
+  const token = localStorage.getItem("token");
 
-  const res = await fetch(`https://resumeiq-11x8.onrender.com/me?email=${email}`);
-  const me = await res.json();
-  window.serverMe = me;
+  // 🚫 Not logged in
+  if (!token) {
+  window.serverMe = null;
 
-  if (me.active) unlockApp();
-  else lockApp();
+  if (navUser) navUser.classList.add("hidden");
+  if (logoutBtn) logoutBtn.classList.add("hidden");
 
-  setTimeout(() => {
-  updatePlanUI(me);
-}, 100);
+  lockApp();
+  updatePlanUI(null);
+  return;
 }
 
+  try {
+    const res = await fetch(
+      "https://resumeiq-11x8.onrender.com/me",
+      {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      }
+    );
+
+    // 🔐 Token invalid or expired
+    if (res.status === 401 || res.status === 403) {
+  localStorage.removeItem("token");
+  window.serverMe = null;
+
+  if (navUser) navUser.classList.add("hidden");
+  if (logoutBtn) logoutBtn.classList.add("hidden");
+
+  lockApp();
+  updatePlanUI(null);
+  return;
+}
+
+    const me = await res.json();
+    window.serverMe = me;
+
+// ✅ Show user in navbar
+if (navUser) {
+  navUser.innerText = me.email;
+  navUser.classList.remove("hidden");
+}
+
+if (logoutBtn) {
+  logoutBtn.classList.remove("hidden");
+}
+
+    if (me.active) {
+      unlockApp();
+    } else {
+      lockApp();
+    }
+
+    setTimeout(() => {
+      updatePlanUI(me);
+    }, 100);
+
+  } catch (err) {
+    console.error("Paywall check failed:", err);
+    lockApp();
+    updatePlanUI(null);
+  }
+}
 /* =====================================================
    UI
 ===================================================== */
@@ -249,13 +307,11 @@ if (window.serverMe?.active) {
   console.log("START CHECKOUT CALLED");
   console.log("Selected Plan:", selectedPlanId);
 
-  const email = localStorage.getItem("email");
-  console.log("Email:", email);
-
-  if (!email) {
-    showLoginModal();
-    return;
-  }
+const token = localStorage.getItem("token");
+if (!token) {
+  showLoginModal();
+  return;
+}
 
   if (!selectedPlanId) {
     alert("No plan selected");
@@ -264,8 +320,8 @@ if (window.serverMe?.active) {
 
   const res = await fetch("https://resumeiq-11x8.onrender.com/create-order", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ planId: selectedPlanId, email })
+    headers: getAuthHeaders(),
+body: JSON.stringify({ planId: selectedPlanId })
   });
 
   if (!res.ok) {
@@ -286,8 +342,8 @@ console.log("Order response:", order);
 handler: async (response) => {
   await fetch("https://resumeiq-11x8.onrender.com/verify-payment", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...response, planId: selectedPlanId, email })
+    headers: getAuthHeaders(),
+body: JSON.stringify({ ...response, planId: selectedPlanId })
   });
 
   showToast("🎉 Plan Activated Successfully!");
@@ -323,11 +379,11 @@ function scrollToPlans() {
 document.getElementById("analyzeBtn").addEventListener("click", async (e) => {
   const btn = e.target;
 
-  const email = localStorage.getItem("email");
-  if (!email) {
-    alert("Please login first");
-    return;
-  }
+  const token = localStorage.getItem("token");
+if (!token) {
+  alert("Please login first");
+  return;
+}
 
   btn.innerText = "Analyzing...";
   btn.disabled = true;
@@ -342,12 +398,11 @@ document.getElementById("analyzeBtn").addEventListener("click", async (e) => {
 
   const res = await fetch("https://resumeiq-11x8.onrender.com/analyze-resume", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email,
-      resume,
-      jobDescription: jd
-    })
+    headers: getAuthHeaders(),
+body: JSON.stringify({
+  resume,
+  jobDescription: jd
+})
   });
 
   if (!res.ok) {
@@ -510,12 +565,11 @@ document.getElementById("comparisonSection").classList.remove("hidden");
 ===================================================== */
 
 autoFixBtn.addEventListener("click", async () => {
-  const email = localStorage.getItem("email");
-
-  if (!email) {
-    alert("Please login first");
-    return;
-  }
+  const token = localStorage.getItem("token");
+if (!token) {
+  alert("Please login first");
+  return;
+}
 
   if (!window.serverMe?.active) {
     showUpgradeModal();
@@ -536,12 +590,11 @@ autoFixBtn.addEventListener("click", async () => {
   try {
     const res = await fetch("https://resumeiq-11x8.onrender.com/auto-fix", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        resumeText,
-        jobDescription
-      })
+      headers: getAuthHeaders(),
+body: JSON.stringify({
+  resume,
+  jobDescription: jd
+})
     });
 
     const data = await res.json();
@@ -568,7 +621,7 @@ downloadReportBtn.addEventListener("click", async () => {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
-  const email = localStorage.getItem("email") || "candidate@email.com";
+  const email = window.serverMe?.email || "Guest User";
   const today = new Date().toLocaleDateString();
 
   const score = document.getElementById("atsScore").innerText;
@@ -631,7 +684,7 @@ doc.roundedRect(15, y - 5, 180, 25, 5, 5, "F");
   doc.text("Resume Snapshot", 15, y);
   y += 8;
 
-  const splitResume = doc.splitTextToSize(resumeInput, 180);
+  const splitResume = doc.splitTextToSize(resumeText, 180);
   doc.setFontSize(10);
   doc.text(splitResume, 15, y);
   y += splitResume.length * 5 + 10;
@@ -649,7 +702,7 @@ doc.roundedRect(15, y - 5, 180, 25, 5, 5, "F");
   doc.text("Job Description Snapshot", 15, y);
   y += 8;
 
-  const splitJD = doc.splitTextToSize(jobInput, 180);
+  const splitJD = doc.splitTextToSize(jdText, 180);
   doc.setFontSize(10);
   doc.text(splitJD, 15, y);
   y += splitJD.length * 5 + 10;
@@ -773,7 +826,8 @@ function closeLoginModal() {
   loginModal.classList.add("hidden");
 }
 
-function submitLogin() {
+
+async function submitLogin() {
   const email = document.getElementById("loginEmail").value.trim();
 
   if (!email || !email.includes("@")) {
@@ -781,12 +835,18 @@ function submitLogin() {
     return;
   }
 
-  localStorage.setItem("email", email);
+  const res = await fetch("https://resumeiq-11x8.onrender.com/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email })
+  });
+
+  const data = await res.json();
+
+  localStorage.setItem("token", data.token);
 
   closeLoginModal();
-
-  // 🔥 Immediately continue checkout
-  startCheckout();
+  await checkPaywall();
 }
 
 function showToast(message) {
@@ -805,3 +865,16 @@ function showToast(message) {
     setTimeout(() => toast.remove(), 300);
   }, 3000);
 }
+
+logoutBtn?.addEventListener("click", () => {
+  localStorage.removeItem("token");
+  window.serverMe = null;
+
+  navUser.classList.add("hidden");
+  logoutBtn.classList.add("hidden");
+
+  lockApp();
+  updatePlanUI(null);
+
+  showToast("Logged out successfully");
+});
