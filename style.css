@@ -1320,3 +1320,10 @@ h2, h3 {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.nav-user,
+.logout-btn {
+  display: flex;
+  align-items: center;
+  height: 40px;
+}
