@@ -307,16 +307,6 @@ button.secondary {
    MODAL
    ========================= */
 
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15,23,42,0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-}
-
 .upgrade-modal {
   background: #ffffff;
   border-radius: 18px;
@@ -355,16 +345,6 @@ button.secondary {
 
 .hidden {
   display: none !important;
-}
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
 }
 
 .upgrade-modal {
@@ -598,6 +578,7 @@ h2 {
   background-size: 400% 400%;
   animation: gradientShift 12s ease infinite;
   color: white;
+margin-top: 72px;
 }
 
 @keyframes gradientShift {
@@ -1031,13 +1012,15 @@ h2, h3 {
 
   background: #ffffff;
   border-radius: 20px;
-  padding: 40px;
+  padding: 40px 36px 36px;
 
   box-shadow:
-    0 10px 40px rgba(0,0,0,0.12),
-    0 2px 6px rgba(0,0,0,0.08);
+    0 20px 50px rgba(0,0,0,0.15),
+    0 4px 10px rgba(0,0,0,0.06);
 
-  animation: modalFade 0.3s ease;
+  text-align: center;
+
+  animation: modalFade 0.25s ease;
 }
 
 /* Smooth pop animation */
@@ -1058,18 +1041,19 @@ h2, h3 {
 
 .login-header {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .login-header h3 {
   font-size: 22px;
   font-weight: 700;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .login-header p {
   font-size: 14px;
   color: #64748b;
+  margin: 0;
 }
 
 /* =========================
@@ -1289,4 +1273,14 @@ h2, h3 {
 .logout-btn:hover {
   background: #dc2626;
   transform: translateY(-2px);
+}
+
+/* ===== Fix Close Button Layout ===== */
+
+.modal-close {
+  width: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
 }
