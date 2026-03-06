@@ -37,18 +37,20 @@ resumeUpload?.addEventListener("change", async () => {
     showToast("Uploading resume...");
 
     const res = await fetch(
-      "https://resumeiq-11x8.onrender.com/upload-resume",
+      "https://resumeiq-11x8.onrender.com/api/upload-resume",
       {
         method: "POST",
         body: formData
       }
     );
 
-    const data = await res.json();
-
     if (!res.ok) {
-      throw new Error(data.error || "Upload failed");
-    }
+  const text = await res.text();
+  console.error("Server error:", text);
+  throw new Error("Upload failed");
+}
+
+const data = await res.json();
 
     if (data.text) {
       document.getElementById("resumeInput").value = data.text;

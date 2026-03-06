@@ -16,7 +16,6 @@ const JWT_SECRET = process.env.JWT_SECRET || "resumeiq_super_secret";
 const isProduction = process.env.NODE_ENV === "production";
 
 const app = express();
-app.use("/api", uploadResume);
 const PORT = process.env.PORT || 4242;
 
 const openai = new OpenAI({
@@ -32,6 +31,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use("/api", uploadResume);
 
 import path from "path";
 import { fileURLToPath } from "url";
