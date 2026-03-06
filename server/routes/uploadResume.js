@@ -13,7 +13,7 @@ const router = express.Router();
 const uploadDir = "uploads";
 
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+  fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 /* ======================
@@ -23,7 +23,7 @@ if (!fs.existsSync(uploadDir)) {
 const upload = multer({
   dest: uploadDir,
   limits: {
-    fileSize: 5 * 1024 * 1024
+    fileSize: 5 * 1024 * 1024 // 5MB
   }
 });
 
@@ -33,29 +33,38 @@ const upload = multer({
 
 router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
-  console.log("UPLOAD ROUTE HIT");
+  console.log("=========== UPLOAD ROUTE HIT ===========");
 
   try {
 
     if (!req.file) {
-      console.log("NO FILE RECEIVED");
-      return res.status(400).json({ error: "NO_FILE" });
+
+      console.log("❌ NO FILE RECEIVED");
+
+      return res.status(400).json({
+        success: false,
+        error: "NO_FILE"
+      });
+
     }
 
-    console.log("FILE RECEIVED:", req.file);
+    console.log("📄 FILE RECEIVED:", req.file);
 
     const filePath = req.file.path;
     const fileType = req.file.mimetype;
 
-    console.log("FILE TYPE:", fileType);
+    console.log("📦 FILE TYPE:", fileType);
+    console.log("📍 FILE PATH:", filePath);
 
     let extractedText = "";
 
-    /* ===== PDF ===== */
+    /* ======================
+       PDF
+    ====================== */
 
     if (fileType === "application/pdf") {
 
-      console.log("PROCESSING PDF");
+      console.log("📑 PROCESSING PDF");
 
       const dataBuffer = fs.readFileSync(filePath);
       const data = await pdf(dataBuffer);
@@ -64,14 +73,16 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
     }
 
-    /* ===== DOCX ===== */
+    /* ======================
+       DOCX
+    ====================== */
 
     else if (
       fileType ===
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     ) {
 
-      console.log("PROCESSING DOCX");
+      console.log("📝 PROCESSING DOCX");
 
       const result = await mammoth.extractRawText({
         path: filePath
@@ -81,48 +92,63 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
     }
 
-    /* ===== TXT ===== */
+    /* ======================
+       TXT
+    ====================== */
 
     else if (fileType === "text/plain") {
 
-      console.log("PROCESSING TXT");
+      console.log("📄 PROCESSING TXT");
 
       extractedText = fs.readFileSync(filePath, "utf8");
 
     }
 
-    /* ===== Unsupported ===== */
+    /* ======================
+       Unsupported file
+    ====================== */
 
     else {
 
-      console.log("UNSUPPORTED FILE TYPE");
+      console.log("❌ UNSUPPORTED FILE TYPE:", fileType);
 
-      fs.unlinkSync(filePath);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
 
       return res.status(400).json({
+        success: false,
         error: "UNSUPPORTED_FILE"
       });
 
     }
 
-    fs.unlinkSync(filePath);
+    /* ======================
+       Cleanup temp file
+    ====================== */
 
-    console.log("TEXT LENGTH:", extractedText.length);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
 
-    res.json({
+    console.log("✅ TEXT EXTRACTED");
+    console.log("📊 TEXT LENGTH:", extractedText.length);
+
+    return res.status(200).json({
       success: true,
       text: extractedText
     });
 
   } catch (err) {
 
-    console.error("UPLOAD ERROR FULL:", err);
+    console.error("🔥 UPLOAD ERROR FULL:", err);
 
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
 
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       error: "UPLOAD_FAILED",
       message: err.message
     });
