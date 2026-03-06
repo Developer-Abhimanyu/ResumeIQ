@@ -2,9 +2,9 @@ import express from "express";
 import multer from "multer";
 import mammoth from "mammoth";
 import fs from "fs";
+import pdfParse from "pdf-parse";
 
 const router = express.Router();
-
 const upload = multer({ dest: "uploads/" });
 
 router.post("/upload-resume", upload.single("resume"), async (req, res) => {
@@ -20,26 +20,16 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
     let extractedText = "";
 
-    /* ======================
-       PDF
-    ====================== */
-
+    // PDF
     if (fileType === "application/pdf") {
 
-      const pdfParse = (await import("pdf-parse")).default;
-
       const dataBuffer = fs.readFileSync(filePath);
-
       const data = await pdfParse(dataBuffer);
-
       extractedText = data.text;
 
     }
 
-    /* ======================
-       DOCX
-    ====================== */
-
+    // DOCX
     else if (
       fileType ===
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -53,19 +43,12 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
     }
 
-    /* ======================
-       TXT
-    ====================== */
-
+    // TXT
     else if (fileType === "text/plain") {
 
       extractedText = fs.readFileSync(filePath, "utf8");
 
     }
-
-    /* ======================
-       INVALID FILE
-    ====================== */
 
     else {
 
@@ -77,10 +60,6 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
     }
 
-    /* ======================
-       CLEANUP
-    ====================== */
-
     fs.unlinkSync(filePath);
 
     res.json({
@@ -90,7 +69,7 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
   } catch (err) {
 
-    console.error("UPLOAD ERROR:", err);
+    console.error(err);
 
     res.status(500).json({
       error: "UPLOAD_FAILED"
