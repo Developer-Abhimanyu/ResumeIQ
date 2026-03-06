@@ -8,6 +8,7 @@ import OpenAI from "openai";
 import { PLANS } from "./plans.js";
 import PDFDocument from "pdfkit";
 import jwt from "jsonwebtoken";
+import uploadResume from "./routes/uploadResume.js";
 
 dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET || "resumeiq_super_secret";
@@ -15,6 +16,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "resumeiq_super_secret";
 const isProduction = process.env.NODE_ENV === "production";
 
 const app = express();
+app.use("/api", uploadResume);
 const PORT = process.env.PORT || 4242;
 
 const openai = new OpenAI({

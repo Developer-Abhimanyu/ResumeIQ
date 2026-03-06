@@ -498,7 +498,8 @@ circle.style.background = `conic-gradient(${color} ${score}%, #e5e7eb ${score}%)
    KEYWORD HEATMAP
 ========================= */
 
-const heatmapBox = document.getElementById("heatmapResult").classList.remove("hidden");
+const heatmapBox = document.getElementById("heatmapResult");
+heatmapBox.classList.remove("hidden");
 
 if (heatmapBox) {
   heatmapBox.innerHTML = `
@@ -589,14 +590,17 @@ if (!token) {
   autoFixBtn.disabled = true;
 
   try {
-    const res = await fetch("https://resumeiq-11x8.onrender.com/auto-fix", {
-      method: "POST",
-      headers: getAuthHeaders(),
-body: JSON.stringify({
-  resume,
-  jobDescription: jd
-})
-    });
+    const resume = document.getElementById("resumeInput").value;
+const jd = document.getElementById("jobInput").value;
+
+const res = await fetch("https://resumeiq-11x8.onrender.com/auto-fix", {
+  method: "POST",
+  headers: getAuthHeaders(),
+  body: JSON.stringify({
+    resume,
+    jobDescription: jd
+  })
+});
 
     const data = await res.json();
 
@@ -904,4 +908,144 @@ logoutBtn?.addEventListener("click", () => {
   updatePlanUI(null);
 
   showToast("Logged out successfully");
+});
+
+/* =========================
+   SAVE RESUME
+========================= */
+
+function saveResume() {
+
+  const data = {
+    name: document.getElementById("name").value,
+    role: document.getElementById("role").value,
+    summary: document.getElementById("summary").value,
+    experience: document.getElementById("experience").value,
+    skills: document.getElementById("skills").value,
+    jd: document.getElementById("jd").value
+  };
+
+  localStorage.setItem("resumeDraft", JSON.stringify(data));
+
+  showToast("Resume saved locally 💾");
+}
+
+/* Auto load saved resume */
+
+window.addEventListener("DOMContentLoaded", () => {
+
+  const saved = localStorage.getItem("resumeDraft");
+
+  if (!saved) return;
+
+  const data = JSON.parse(saved);
+
+  document.getElementById("name").value = data.name || "";
+  document.getElementById("role").value = data.role || "";
+  document.getElementById("summary").value = data.summary || "";
+  document.getElementById("experience").value = data.experience || "";
+  document.getElementById("skills").value = data.skills || "";
+  document.getElementById("jd").value = data.jd || "";
+});
+
+/* =========================
+   REWRITE SUMMARY AI
+========================= */
+
+rewriteBtn.addEventListener("click", async () => {
+
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    showLoginModal();
+    return;
+  }
+
+  if (!window.serverMe?.active) {
+    showUpgradeModal();
+    return;
+  }
+
+  const currentSummary = summary.value;
+
+  if (!currentSummary) {
+    alert("Please write a summary first");
+    return;
+  }
+
+  rewriteBtn.innerText = "Rewriting...";
+  rewriteBtn.disabled = true;
+
+  try {
+
+    const res = await fetch(
+      "https://resumeiq-11x8.onrender.com/use-ai",
+      {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          type: "rewrite_summary",
+          text: currentSummary
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    if (data.result) {
+      summary.value = data.result;
+      showToast("✨ Summary improved");
+    }
+
+  } catch (err) {
+
+    alert("AI rewrite failed");
+
+  }
+
+  rewriteBtn.innerText = "✨ Rewrite Summary (AI)";
+  rewriteBtn.disabled = false;
+});
+
+/* =========================
+   RESUME UPLOAD
+========================= */
+
+const resumeUpload = document.getElementById("resumeUpload");
+
+resumeUpload.addEventListener("change", async () => {
+
+  const file = resumeUpload.files[0];
+
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("resume", file);
+
+  try {
+
+    const res = await fetch(
+      "https://resumeiq-11x8.onrender.com/api/upload-resume",
+      {
+        method: "POST",
+        body: formData
+      }
+    );
+
+    const data = await res.json();
+
+    if (data.text) {
+
+      document.getElementById("resumeInput").value = data.text;
+
+      showToast("Resume uploaded successfully 📄");
+
+    }
+
+  } catch (err) {
+
+    alert("Upload failed");
+
+  }
+
 });
