@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import pdf from "pdf-parse";
+import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import fs from "fs";
 
@@ -9,7 +9,6 @@ const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 
 router.post("/upload-resume", upload.single("resume"), async (req, res) => {
-
   try {
 
     if (!req.file) {
@@ -21,12 +20,25 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
     let extractedText = "";
 
+    /* ======================
+       PDF
+    ====================== */
+
     if (fileType === "application/pdf") {
 
-      const data = await pdf(fs.readFileSync(filePath));
+      const dataBuffer = fs.readFileSync(filePath);
+
+      const data = await pdfParse(dataBuffer);
+
       extractedText = data.text;
 
-    } else if (
+    }
+
+    /* ======================
+       DOCX
+    ====================== */
+
+    else if (
       fileType ===
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     ) {
@@ -37,17 +49,35 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
       extractedText = result.value;
 
-    } else if (fileType === "text/plain") {
+    }
+
+    /* ======================
+       TXT
+    ====================== */
+
+    else if (fileType === "text/plain") {
 
       extractedText = fs.readFileSync(filePath, "utf8");
 
-    } else {
+    }
+
+    /* ======================
+       INVALID FILE
+    ====================== */
+
+    else {
+
+      fs.unlinkSync(filePath);
 
       return res.status(400).json({
         error: "UNSUPPORTED_FILE"
       });
 
     }
+
+    /* ======================
+       CLEANUP
+    ====================== */
 
     fs.unlinkSync(filePath);
 
@@ -65,7 +95,6 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
     });
 
   }
-
 });
 
 export default router;
