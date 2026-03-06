@@ -1,29 +1,18 @@
 import express from "express";
 import multer from "multer";
 import mammoth from "mammoth";
-import fs from "fs";
 import pdf from "pdf-parse/lib/pdf-parse.js";
 
 const router = express.Router();
 
 /* ======================
-   Ensure uploads folder exists
-====================== */
-
-const uploadDir = "uploads";
-
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-/* ======================
-   Multer setup
+   Multer (Memory Storage)
 ====================== */
 
 const upload = multer({
-  dest: uploadDir,
+  storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
+    fileSize: 5 * 1024 * 1024
   }
 });
 
@@ -48,13 +37,11 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
     }
 
-    console.log("📄 FILE RECEIVED:", req.file);
+    console.log("📄 FILE RECEIVED:", req.file.originalname);
+    console.log("📦 FILE TYPE:", req.file.mimetype);
 
-    const filePath = req.file.path;
     const fileType = req.file.mimetype;
-
-    console.log("📦 FILE TYPE:", fileType);
-    console.log("📍 FILE PATH:", filePath);
+    const fileBuffer = req.file.buffer;
 
     let extractedText = "";
 
@@ -66,8 +53,7 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
       console.log("📑 PROCESSING PDF");
 
-      const dataBuffer = fs.readFileSync(filePath);
-      const data = await pdf(dataBuffer);
+      const data = await pdf(fileBuffer);
 
       extractedText = data.text;
 
@@ -85,7 +71,7 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
       console.log("📝 PROCESSING DOCX");
 
       const result = await mammoth.extractRawText({
-        path: filePath
+        buffer: fileBuffer
       });
 
       extractedText = result.value;
@@ -100,21 +86,17 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
       console.log("📄 PROCESSING TXT");
 
-      extractedText = fs.readFileSync(filePath, "utf8");
+      extractedText = fileBuffer.toString("utf8");
 
     }
 
     /* ======================
-       Unsupported file
+       Unsupported
     ====================== */
 
     else {
 
       console.log("❌ UNSUPPORTED FILE TYPE:", fileType);
-
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
 
       return res.status(400).json({
         success: false,
@@ -123,12 +105,15 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
     }
 
-    /* ======================
-       Cleanup temp file
-    ====================== */
+    if (!extractedText || extractedText.trim().length === 0) {
 
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+      console.log("❌ TEXT EXTRACTION FAILED");
+
+      return res.status(500).json({
+        success: false,
+        error: "TEXT_EXTRACTION_FAILED"
+      });
+
     }
 
     console.log("✅ TEXT EXTRACTED");
@@ -142,10 +127,6 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
   } catch (err) {
 
     console.error("🔥 UPLOAD ERROR FULL:", err);
-
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
 
     return res.status(500).json({
       success: false,

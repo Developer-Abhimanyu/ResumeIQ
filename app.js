@@ -17,6 +17,53 @@ const downloadReportBtn = document.getElementById("downloadReportBtn");
 const navUser = document.getElementById("navUser");
 const logoutBtn = document.getElementById("logoutBtn");
 
+/* =========================
+   RESUME FILE UPLOAD
+========================= */
+
+const resumeUpload = document.getElementById("resumeUpload");
+
+resumeUpload?.addEventListener("change", async () => {
+
+  const file = resumeUpload.files[0];
+
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("resume", file);
+
+  try {
+
+    showToast("Uploading resume...");
+
+    const res = await fetch(
+      "https://resumeiq-11x8.onrender.com/upload-resume",
+      {
+        method: "POST",
+        body: formData
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || "Upload failed");
+    }
+
+    if (data.text) {
+      document.getElementById("resumeInput").value = data.text;
+      showToast("✅ Resume uploaded successfully");
+    }
+
+  } catch (err) {
+
+    console.error("Upload error:", err);
+    showToast("❌ Upload failed");
+
+  }
+
+});
+
 /* =====================================================
    STATE
 ===================================================== */
