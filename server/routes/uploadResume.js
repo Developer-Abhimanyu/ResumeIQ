@@ -2,11 +2,6 @@ import express from "express";
 import multer from "multer";
 import mammoth from "mammoth";
 import fs from "fs";
-import { createRequire } from "module";
-
-const require = createRequire(import.meta.url);
-const pdfParseLib = require("pdf-parse");
-const pdfParse = pdfParseLib.default || pdfParseLib;
 
 const router = express.Router();
 
@@ -30,6 +25,8 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
     ====================== */
 
     if (fileType === "application/pdf") {
+
+      const pdfParse = (await import("pdf-parse")).default;
 
       const dataBuffer = fs.readFileSync(filePath);
 
@@ -80,6 +77,10 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
     }
 
+    /* ======================
+       CLEANUP
+    ====================== */
+
     fs.unlinkSync(filePath);
 
     res.json({
@@ -89,7 +90,7 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
   } catch (err) {
 
-    console.error(err);
+    console.error("UPLOAD ERROR:", err);
 
     res.status(500).json({
       error: "UPLOAD_FAILED"
