@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import pdfParse from "pdf-parse";
+import * as pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import fs from "fs";
 
@@ -26,13 +26,13 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
     if (fileType === "application/pdf") {
 
-      const dataBuffer = fs.readFileSync(filePath);
+  const dataBuffer = fs.readFileSync(filePath);
 
-      const data = await pdfParse(dataBuffer);
+  const data = await pdfParse.default(dataBuffer);
 
-      extractedText = data.text;
+  extractedText = data.text;
 
-    }
+}
 
     /* ======================
        DOCX
