@@ -2,13 +2,15 @@ import express from "express";
 import multer from "multer";
 import mammoth from "mammoth";
 import fs from "fs";
-import pdfParse from "pdf-parse";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse"); // <-- correct way
 
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 
 router.post("/upload-resume", upload.single("resume"), async (req, res) => {
-
   try {
 
     if (!req.file) {
@@ -20,16 +22,24 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
     let extractedText = "";
 
-    // PDF
+    /* ======================
+       PDF
+    ====================== */
+
     if (fileType === "application/pdf") {
 
       const dataBuffer = fs.readFileSync(filePath);
+
       const data = await pdfParse(dataBuffer);
+
       extractedText = data.text;
 
     }
 
-    // DOCX
+    /* ======================
+       DOCX
+    ====================== */
+
     else if (
       fileType ===
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -43,7 +53,10 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
 
     }
 
-    // TXT
+    /* ======================
+       TXT
+    ====================== */
+
     else if (fileType === "text/plain") {
 
       extractedText = fs.readFileSync(filePath, "utf8");
@@ -76,7 +89,6 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
     });
 
   }
-
 });
 
 export default router;
