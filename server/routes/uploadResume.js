@@ -2,6 +2,10 @@ import express from "express";
 import multer from "multer";
 import mammoth from "mammoth";
 import fs from "fs";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
 
 const router = express.Router();
 
@@ -27,8 +31,6 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
     if (fileType === "application/pdf") {
 
       const dataBuffer = fs.readFileSync(filePath);
-
-      const pdfParse = (await import("pdf-parse")).default;
 
       const data = await pdfParse(dataBuffer);
 
@@ -76,10 +78,6 @@ router.post("/upload-resume", upload.single("resume"), async (req, res) => {
       });
 
     }
-
-    /* ======================
-       CLEANUP
-    ====================== */
 
     fs.unlinkSync(filePath);
 
