@@ -100,7 +100,14 @@ or paste resume manually below
     rows="6"
   ></textarea>
 
-  <button id="analyzeBtn">Analyze Resume</button>
+  <button onclick="analyzeResume()">
+Analyze Resume
+</button>
+
+<h3>ATS Score: <span id="atsScore"></span></h3>
+<h3>Keyword Match: <span id="keywordMatch"></span></h3>
+
+<ul id="missingKeywords"></ul>
 <div id="heatmapResult" class="heatmap-box hidden"></div>
 <button id="autoFixBtn" type="button">
   ✨ Auto Fix Resume (Pro)

@@ -1055,3 +1055,59 @@ rewriteBtn.addEventListener("click", async () => {
   rewriteBtn.innerText = "✨ Rewrite Summary (AI)";
   rewriteBtn.disabled = false;
 });
+
+async function analyzeResume() {
+
+  const token = localStorage.getItem("token");
+
+  const resume = window.extractedResumeText;
+  const jobDescription = document.getElementById("jobDescription").value;
+
+  if (!resume || !jobDescription) {
+    alert("Upload resume and paste job description");
+    return;
+  }
+
+  const res = await fetch(
+    "https://resumeiq-11x8.onrender.com/analyze-resume",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        resume,
+        jobDescription
+      })
+    }
+  );
+
+  const data = await res.json();
+
+  if (!data.atsScore) {
+    alert("Analysis failed");
+    return;
+  }
+
+  displayResults(data);
+}
+
+function displayResults(data) {
+
+  document.getElementById("atsScore").innerText =
+    data.atsScore + "%";
+
+  document.getElementById("keywordMatch").innerText =
+    data.keywordMatch + "%";
+
+  const missing = document.getElementById("missingKeywords");
+  missing.innerHTML = "";
+
+  data.missingKeywords.forEach(k => {
+    const li = document.createElement("li");
+    li.innerText = k;
+    missing.appendChild(li);
+  });
+
+}
