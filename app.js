@@ -441,10 +441,12 @@ if (!token) {
   const resume = document.getElementById("resumeInput").value;
   const jd = document.getElementById("jobInput").value;
 
-  if (!resume || !jd) {
-    alert("Resume and Job Description required");
-    return;
-  }
+ if (!resume || !jd) {
+  alert("Resume and Job Description required");
+  btn.innerText = "🎯 Analyze Resume";
+  btn.disabled = false;
+  return;
+}
 
   const res = await fetch("https://resumeiq-11x8.onrender.com/analyze-resume", {
     method: "POST",
@@ -517,7 +519,7 @@ if (score > 60) color = "#f59e0b"; // yellow
 if (score > 80) color = "#10b981"; // green
 
 circle.style.background = `conic-gradient(${color} ${score}%, #e5e7eb ${score}%)`;
-  document.getElementById("keywordMatch").innerText = data.keywordMatch + "%";
+  document.getElementById("keywordMatch").innerText = matchPercent + "%";
 
   const missingList = document.getElementById("missingKeywords");
   missingList.innerHTML = "";
@@ -1055,59 +1057,3 @@ rewriteBtn.addEventListener("click", async () => {
   rewriteBtn.innerText = "✨ Rewrite Summary (AI)";
   rewriteBtn.disabled = false;
 });
-
-async function analyzeResume() {
-
-  const token = localStorage.getItem("token");
-
-  const resume = window.extractedResumeText;
-  const jobDescription = document.getElementById("jobDescription").value;
-
-  if (!resume || !jobDescription) {
-    alert("Upload resume and paste job description");
-    return;
-  }
-
-  const res = await fetch(
-    "https://resumeiq-11x8.onrender.com/analyze-resume",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        resume,
-        jobDescription
-      })
-    }
-  );
-
-  const data = await res.json();
-
-  if (!data.atsScore) {
-    alert("Analysis failed");
-    return;
-  }
-
-  displayResults(data);
-}
-
-function displayResults(data) {
-
-  document.getElementById("atsScore").innerText =
-    data.atsScore + "%";
-
-  document.getElementById("keywordMatch").innerText =
-    data.keywordMatch + "%";
-
-  const missing = document.getElementById("missingKeywords");
-  missing.innerHTML = "";
-
-  data.missingKeywords.forEach(k => {
-    const li = document.createElement("li");
-    li.innerText = k;
-    missing.appendChild(li);
-  });
-
-}
