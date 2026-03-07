@@ -427,57 +427,70 @@ function scrollToPlans() {
 ========================= */
 
 document.getElementById("analyzeBtn")?.addEventListener("click", async (e) => {
+
   const btn = e.target;
-
-  const token = localStorage.getItem("token");
-if (!token) {
-  alert("Please login first");
-  return;
-}
-
   btn.innerText = "Analyzing...";
   btn.disabled = true;
 
-  const resume = document.getElementById("resumeInput").value;
-  const jd = document.getElementById("jobInput").value;
+  try {
 
- if (!resume || !jd) {
-  alert("Resume and Job Description required");
-  btn.innerText = "🎯 Analyze Resume";
-  btn.disabled = false;
-  return;
-}
+    const token = localStorage.getItem("token");
 
-  const res = await fetch("https://resumeiq-11x8.onrender.com/analyze-resume", {
-    method: "POST",
-    headers: getAuthHeaders(),
-body: JSON.stringify({
-  resume,
-  jobDescription: jd
-})
-  });
+    if (!token) {
+      alert("Please login first");
+      throw new Error("No token");
+    }
 
-  if (!res.ok) {
-  const error = await res.json();
-  console.log(error);
+    const resume = document.getElementById("resumeInput").value;
+    const jd = document.getElementById("jobInput").value;
 
-  if (error.reason === "NO_SUBSCRIPTION") {
-    alert("No active subscription found");
-  } else if (error.reason === "EXPIRED") {
-    alert("Subscription expired");
-  } else {
-    alert("Access denied");
+    if (!resume || !jd) {
+      alert("Resume and Job Description required");
+      throw new Error("Missing input");
+    }
+
+    const res = await fetch(
+      "https://resumeiq-11x8.onrender.com/analyze-resume",
+      {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          resume,
+          jobDescription: jd
+        })
+      }
+    );
+
+    if (!res.ok) {
+
+      if (res.status === 429) {
+        alert("Too many requests. Please wait 30 seconds.");
+        throw new Error("Rate limit");
+      }
+
+      if (res.status === 403) {
+        alert("Access denied. Check subscription.");
+        throw new Error("Forbidden");
+      }
+
+      throw new Error("Server error");
+    }
+
+    const data = await res.json();
+
+    renderAnalysis(data);
+
+  } catch (err) {
+
+    console.error("Analyze error:", err);
+
+  } finally {
+
+    btn.innerText = "🎯 Analyze Resume";
+    btn.disabled = false;
+
   }
 
-  btn.innerText = "Analyze Resume";
-  btn.disabled = false;
-  return;
-}
-
-  const data = await res.json();
-btn.innerText = "Analyze Resume";
-btn.disabled = false;
-  renderAnalysis(data);
 });
 
 function renderAnalysis(data) {
@@ -586,7 +599,8 @@ let highlightedJD = jdText;
 // Highlight matched keywords
 if (data.matchedKeywords) {
   data.matchedKeywords.forEach(keyword => {
-    const regex = new RegExp(`(${keyword})`, "gi");
+    const safe = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const regex = new RegExp(`(${safe})`, "gi");
     highlightedResume = highlightedResume.replace(
       regex,
       `<span class="highlight-match">$1</span>`

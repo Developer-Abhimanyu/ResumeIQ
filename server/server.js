@@ -323,9 +323,54 @@ app.post("/use-ai", authenticateToken, requireActiveSubscription, async (req, re
   });
 });
 
-/* =========================
-   ANALYZE RESUME (PAID ONLY)
-========================= */
+function calculateATS(resume, jobDescription) {
+
+  const resumeLower = resume.toLowerCase();
+  const jdLower = jobDescription.toLowerCase();
+
+  // Extract keywords from JD
+  const jdWords = jdLower.match(/\b[a-zA-Z]{4,}\b/g) || [];
+  const uniqueJDWords = [...new Set(jdWords)];
+
+  // Match keywords
+  const matched = uniqueJDWords.filter(word =>
+    resumeLower.includes(word)
+  );
+
+  const keywordScore = Math.min(
+    100,
+    Math.round((matched.length / uniqueJDWords.length) * 60)
+  );
+
+  // Length check
+  const lengthScore =
+    resume.length > 800 && resume.length < 8000 ? 10 : 5;
+
+  // Section detection
+  const sections = ["experience", "education", "skills", "projects"];
+
+  let sectionScore = 0;
+
+  sections.forEach(s => {
+    if (resumeLower.includes(s)) sectionScore += 5;
+  });
+
+  // Bullet points detection
+  const bulletScore = resume.includes("•") || resume.includes("-") ? 10 : 0;
+
+  const atsScore = Math.min(
+    100,
+    keywordScore + lengthScore + sectionScore + bulletScore
+  );
+
+  return {
+    atsScore,
+    keywordMatch: Math.round(
+      (matched.length / uniqueJDWords.length) * 100
+    ),
+    matchedKeywords: matched
+  };
+}
 
 /* =========================
    ANALYZE RESUME (ADVANCED)
@@ -337,7 +382,7 @@ app.post("/analyze-resume", authenticateToken, requireActiveSubscription, async 
   if (!resume || !jobDescription) {
     return res.status(400).json({ error: "Resume and JD required" });
   }
-
+const localScore = calculateATS(resume, jobDescription);
   const prompt = `
 You are an expert ATS resume evaluator.
 
@@ -346,8 +391,8 @@ Analyze the resume against the job description.
 Return ONLY valid JSON in this exact format:
 
 {
-  "atsScore": number (0-100),
-  "keywordMatch": number (0-100),
+  "atsScore": number,
+  "keywordMatch": number,
   "missingKeywords": [array of strings],
   "improvements": [array of short suggestions],
   "optimizedBullets": [array of improved bullet points]
@@ -360,47 +405,66 @@ Job Description:
 ${jobDescription}
 `;
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.3,
-    max_tokens: 800,
-  });
-
   try {
-  const result = JSON.parse(
-    completion.choices[0].message.content.trim()
-  );
 
-  // 🔥 Calculate matched keywords manually
-  const resumeLower = resume.toLowerCase();
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+      max_tokens: 800,
+    });
 
-  const matchedKeywords = [];
-  result.missingKeywords.forEach(k => {
-    if (!resumeLower.includes(k.toLowerCase())) return;
-  });
+    let aiText = completion.choices[0].message.content.trim();
 
-  // Extract keywords from JD for matching
-  const jdWords = jobDescription
-    .toLowerCase()
-    .match(/\b[a-zA-Z]{4,}\b/g) || [];
+    // 🔥 Remove markdown if AI wraps JSON
+    aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
 
-  const uniqueJDWords = [...new Set(jdWords)];
+    const result = JSON.parse(aiText);
 
-  uniqueJDWords.forEach(word => {
-    if (resumeLower.includes(word)) {
-      matchedKeywords.push(word);
+    // 🔥 Calculate matched keywords
+    const resumeLower = resume.toLowerCase();
+    const jdWords = jobDescription
+      .toLowerCase()
+      .match(/\b[a-zA-Z]{4,}\b/g) || [];
+
+    const uniqueJDWords = [...new Set(jdWords)];
+
+    const matchedKeywords = uniqueJDWords.filter(word =>
+      resumeLower.includes(word)
+    );
+
+    return res.json({
+      atsScore: result.atsScore,
+      keywordMatch: result.keywordMatch,
+      missingKeywords: result.missingKeywords,
+      improvements: result.improvements,
+      optimizedBullets: result.optimizedBullets,
+      matchedKeywords
+    });
+
+  } catch (err) {
+
+    console.error("Analyze error:", err);
+
+    // 🔥 Handle OpenAI rate limit
+    if (err.status === 429) {
+      return res.status(429).json({
+        error: "RATE_LIMIT",
+        message: "AI rate limit reached. Try again in 30 seconds."
+      });
     }
-  });
 
-  res.json({
-    ...result,
-    matchedKeywords
-  });
+    // 🔥 Handle JSON parsing errors
+    if (err instanceof SyntaxError) {
+      return res.status(500).json({
+        error: "AI_PARSE_FAILED"
+      });
+    }
 
-} catch (err) {
-  res.status(500).json({ error: "AI response parsing failed" });
-}
+    return res.status(500).json({
+      error: "AI_ANALYSIS_FAILED"
+    });
+  }
 });
 
 /* =========================
