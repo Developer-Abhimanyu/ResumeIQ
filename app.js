@@ -426,7 +426,7 @@ function scrollToPlans() {
    RESUME ANALYZER
 ========================= */
 
-document.getElementById("analyzeBtn").addEventListener("click", async (e) => {
+document.getElementById("analyzeBtn")?.addEventListener("click", async (e) => {
   const btn = e.target;
 
   const token = localStorage.getItem("token");
